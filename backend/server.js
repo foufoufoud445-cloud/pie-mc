@@ -442,13 +442,17 @@ wss.on('connection', (ws) => {
 
 // ─── START SERVER ──────────────────────────────────────────
 
-initDatabase();
-
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n======================================================`);
-  console.log(`Pie MC Server listening on http://localhost:${PORT}`);
-  console.log(`   - Auth: Username/Password (bcrypt)`);
-  console.log(`   - Admin: admin@autopie.site`);
-  console.log(`   - Token Cryptography: AES-256-GCM`);
-  console.log(`======================================================\n`);
+initDatabase().then(() => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n======================================================`);
+    console.log(`Pie MC Server listening on http://localhost:${PORT}`);
+    console.log(`   - Database: ${process.env.DATABASE_MODE || 'turso'}`);
+    console.log(`   - Auth: Username/Password (bcrypt)`);
+    console.log(`   - Admin: admin@autopie.site`);
+    console.log(`   - Token Cryptography: AES-256-GCM`);
+    console.log(`======================================================\n`);
+  });
+}).catch(err => {
+  console.error('[Pie MC] Failed to start:', err.message);
+  process.exit(1);
 });

@@ -88,40 +88,64 @@ class BotInstance extends EventEmitter {
 
       this.bot = mineflayer.createBot(botOptions);
 
+      // Timeout: if bot doesn't spawn in 30s, mark as failed
+      const spawnTimeout = setTimeout(() => {
+        if (this.status === 'connecting') {
+          console.error(`[BotManager] Bot "${this.name}" timed out - never spawned (30s). Check server address, version, and token.`);
+          this.status = 'offline';
+          this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
+          this.emit('log', { instance: this.name, event: 'Timeout', details: 'Bot did not spawn within 30 seconds. Check server, version, and token.' });
+          try { this.bot.quit(); } catch(e) {}
+          this.bot = null;
+        }
+      }, 30000);
+
+      this.bot.on('login', () => {
+        console.log(`[BotManager] Bot "${this.name}" logged in successfully, waiting for spawn...`);
+      });
+
       this.bot.on('spawn', () => {
+        clearTimeout(spawnTimeout);
         this.status = 'online';
         this.reconnectAttempts = 0;
+        console.log(`[BotManager] Bot "${this.name}" spawned and ready!`);
         this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
+        this.emit('chat', {
+          time: new Date().toTimeString().split(' ')[0],
+          player: 'SYSTEM',
+          tag: '[SYSTEM]',
+          msg: `Connected to ${botOptions.host}:${botOptions.port} as ${botOptions.username}`,
+          type: 'system'
+        });
         this.startAutomations();
       });
 
       this.bot.on('chat', (username, message) => {
         if (username === this.bot.username) return;
-
         const time = new Date().toTimeString().split(' ')[0];
-        this.emit('chat', {
-          time,
-          player: username,
-          tag: '[CHAT]',
-          msg: message,
-          type: 'chat'
-        });
-
+        this.emit('chat', { time, player: username, tag: '[CHAT]', msg: message, type: 'chat' });
         this.evaluateTriggers(username, message);
       });
 
       this.bot.on('kicked', (reason) => {
-        console.warn(`[BotManager] Bot "${this.name}" kicked:`, reason);
+        clearTimeout(spawnTimeout);
+        console.warn(`[BotManager] Bot "${this.name}" kicked:`, JSON.stringify(reason));
+        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[KICKED]', msg: `Kicked: ${typeof reason === 'string' ? reason : JSON.stringify(reason)}`, type: 'system' });
         this.emit('log', { instance: this.name, event: 'Kicked', details: JSON.stringify(reason) });
-        this.handleDisconnect();
+        this.status = 'offline';
+        this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
       });
 
       this.bot.on('error', (err) => {
         console.error(`[BotManager] Bot "${this.name}" error:`, err.message);
+        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[ERROR]', msg: err.message, type: 'system' });
         this.emit('log', { instance: this.name, event: 'Error', details: err.message });
       });
 
-      this.bot.on('end', () => {
+      this.bot.on('end', (reason) => {
+        clearTimeout(spawnTimeout);
+        console.log(`[BotManager] Bot "${this.name}" disconnected: ${reason}`);
+        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[DISCONNECT]', msg: `Disconnected: ${reason}`, type: 'system' });
         this.handleDisconnect();
       });
 
