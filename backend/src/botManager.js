@@ -62,15 +62,21 @@ class BotInstance extends EventEmitter {
         port: (this.config.server && this.config.server.port) || 25565,
         username: (this.config.account && this.config.account.username) || 'PieBot',
         version: (this.config.server && this.config.server.version) || '1.21.1',
-        // Only use 'microsoft' auth when NO token is provided — let mineflayer do the full OAuth flow.
-        // When a token IS provided, mineflayer will use it directly without forcing a fresh login.
-        auth: hasToken ? undefined : 'microsoft',
+        auth: hasToken ? 'microsoft' : 'microsoft',
+        // haveCredentials tells minecraft-protocol to call sessionserver.mojang.com
+        // to validate the token. Without this, online-mode servers reject the bot.
+        haveCredentials: hasToken,
+        accessToken: hasToken ? this.config.account.rawToken : undefined,
         session: hasToken ? {
           accessToken: this.config.account.rawToken,
           selectedProfile: {
             id: rawUuid,
             name: this.config.account.username
-          }
+          },
+          availableProfile: [{
+            id: rawUuid,
+            name: this.config.account.username
+          }]
         } : undefined
       };
 
