@@ -1,9 +1,6 @@
 /**
- * Pie MC - Tri-Mode Database Engine
- * Supports:
- *   1. Local JSON File Store (zero-dependency flat-files)
- *   2. SQLite Database (embedded high performance)
- *   3. Turso Cloud (libSQL serverless cloud database)
+ * Pie MC - Database Engine
+ * SQLite with user auth, login logs, and multi-tenant bot management.
  */
 
 const path = require('path');
@@ -30,7 +27,29 @@ function initDatabase() {
     try {
       const Database = require('better-sqlite3');
       sqliteDB = new Database(sqlitePath);
+      sqliteDB.pragma('journal_mode = WAL');
+
       sqliteDB.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          username TEXT UNIQUE NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          role TEXT DEFAULT 'user' CHECK(role IN ('admin', 'user')),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          last_login DATETIME
+        );
+
+        CREATE TABLE IF NOT EXISTS login_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          username TEXT NOT NULL,
+          action TEXT NOT NULL,
+          details TEXT DEFAULT '',
+          ip_address TEXT DEFAULT '',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
         CREATE TABLE IF NOT EXISTS accounts (
           id TEXT PRIMARY KEY,
           user_id TEXT NOT NULL,
@@ -92,6 +111,17 @@ function initDatabase() {
           value TEXT NOT NULL
         );
       `);
+
+      // Seed admin account if not exists
+      const bcrypt = require('bcryptjs');
+      const existingAdmin = sqliteDB.prepare('SELECT id FROM users WHERE email = ?').get('admin@autopie.site');
+      if (!existingAdmin) {
+        const adminHash = bcrypt.hashSync('autopie@#@%2143', 10);
+        sqliteDB.prepare(
+          'INSERT INTO users (id, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?)'
+        ).run('admin_001', 'admin', 'admin@autopie.site', adminHash, 'admin');
+        console.log('[Pie MC Database] Default admin account seeded: admin@autopie.site');
+      }
       console.log('[Pie MC Database] SQLite engine initialized successfully.');
       return sqliteDB;
     } catch (e) {

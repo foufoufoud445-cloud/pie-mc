@@ -1,6 +1,6 @@
 /**
- * Pie MC - Master Backend API, Discord OAuth2 Gateway & WebSocket Server
- * Multi-Tenant architecture with real Mojang token verification & AES-256-GCM vault.
+ * Pie MC - Backend API & WebSocket Server
+ * Username/password authentication, admin panel, multi-tenant bot management.
  */
 
 const express = require('express');
@@ -11,7 +11,13 @@ const WebSocket = require('ws');
 require('dotenv').config();
 
 const { initDatabase, getDB } = require('./src/database');
-const { encryptToken, decryptToken } = require('./src/auth');
+const {
+  encryptToken, decryptToken,
+  authenticateUser, createUser,
+  logLoginAction, getAllUsers, getUserById,
+  updateUserPassword, updateUserProfile,
+  deleteUser, getLoginLogs, getAllUsersSummary
+} = require('./src/auth');
 const botManager = require('./src/botManager');
 
 const app = express();
@@ -19,23 +25,30 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
 const PORT = process.env.PORT || 8082;
-const API_KEY = process.env.PIE_MC_API_KEY || 'pie_mc_live_89437b02c89f4172';
-const OWNER_DISCORD_ID = process.env.OWNER_DISCORD_ID || '987654321098765432';
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-const requireAuth = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!API_KEY) return next();
-  if (authHeader && authHeader === `Bearer ${API_KEY}`) {
-    return next();
+// ─── Auth Middleware ───────────────────────────────────────
+function requireAuth(req, res, next) {
+  const userId = req.headers['x-user-id'];
+  if (!userId) return res.status(401).json({ success: false, error: 'Not authenticated' });
+  const user = getUserById(userId);
+  if (!user) return res.status(401).json({ success: false, error: 'User not found' });
+  req.user = user;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'admin') {
+    return res.status(403).json({ success: false, error: 'Admin access required' });
   }
   next();
-};
+}
 
+// ─── Helpers ───────────────────────────────────────────────
 function formatUUID(raw) {
   if (!raw || raw.includes('-')) return raw;
   return raw.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5');
@@ -56,16 +69,165 @@ function sanitizeToken(token) {
   return clean.replace(/^["']|["']$/g, '').trim();
 }
 
-// 1. PUBLIC CONFIG
-app.get('/api/config', (req, res) => {
+// ─── AUTH ROUTES ───────────────────────────────────────────
+
+// Login
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: 'Email and password are required' });
+  }
+  const result = authenticateUser(email, password);
+  if (result.success) {
+    logLoginAction(result.user.id, result.user.username, 'login', `Logged in via email`, req.ip);
+    console.log(`[Auth] ${result.user.username} (${result.user.role}) logged in`);
+  }
+  res.json(result);
+});
+
+// Register (admin can create users, anyone can self-register if enabled)
+app.post('/api/auth/register', (req, res) => {
+  const { username, email, password, role } = req.body;
+  if (!username || !email || !password) {
+    return res.status(400).json({ success: false, error: 'Username, email, and password are required' });
+  }
+  // Only admin can create admin accounts
+  const requestingUser = req.headers['x-user-id'] ? getUserById(req.headers['x-user-id']) : null;
+  const finalRole = (role === 'admin' && requestingUser && requestingUser.role === 'admin') ? 'admin' : 'user';
+
+  const result = createUser(username, email, password, finalRole);
+  if (result.success) {
+    logLoginAction(result.user.id, result.user.username, 'account_created', `Created by ${requestingUser ? requestingUser.username : 'self'}`, req.ip);
+  }
+  res.json(result);
+});
+
+// Get current user profile
+app.get('/api/auth/me', requireAuth, (req, res) => {
+  res.json({ success: true, user: req.user });
+});
+
+// Change password (any user)
+app.post('/api/auth/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Current and new password are required' });
+  }
+  const { verifyPassword } = require('./src/auth');
+  const db = getDB();
+  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+  if (!verifyPassword(currentPassword, fullUser.password_hash)) {
+    return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+  }
+  updateUserPassword(req.user.id, newPassword);
+  logLoginAction(req.user.id, req.user.username, 'password_changed', 'Changed own password', req.ip);
+  res.json({ success: true, message: 'Password updated' });
+});
+
+// ─── ADMIN ROUTES ──────────────────────────────────────────
+
+// Admin: list all users
+app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
+  const users = getAllUsers();
+  res.json({ success: true, users });
+});
+
+// Admin: get full user data (accounts, servers, proxies, etc.)
+app.get('/api/admin/users/:id/data', requireAuth, requireAdmin, (req, res) => {
+  const summary = getAllUsersSummary().find(u => u.id === req.params.id);
+  if (!summary) return res.status(404).json({ success: false, error: 'User not found' });
+  res.json({ success: true, data: summary });
+});
+
+// Admin: get all users with full data
+app.get('/api/admin/users-all', requireAuth, requireAdmin, (req, res) => {
+  const all = getAllUsersSummary();
+  res.json({ success: true, users: all });
+});
+
+// Admin: create user
+app.post('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
+  const { username, email, password, role } = req.body;
+  if (!username || !email || !password) {
+    return res.status(400).json({ success: false, error: 'Username, email, and password required' });
+  }
+  const result = createUser(username, email, password, role === 'admin' ? 'admin' : 'user');
+  if (result.success) {
+    logLoginAction(result.user.id, result.user.username, 'account_created', `Created by admin ${req.user.username}`, req.ip);
+  }
+  res.json(result);
+});
+
+// Admin: update user profile (username)
+app.put('/api/admin/users/:id', requireAuth, requireAdmin, (req, res) => {
+  const { username } = req.body;
+  if (username) {
+    const result = updateUserProfile(req.params.id, username);
+    return res.json(result);
+  }
+  res.status(400).json({ success: false, error: 'Username required' });
+});
+
+// Admin: reset user password
+app.post('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, (req, res) => {
+  const { newPassword } = req.body;
+  if (!newPassword) return res.status(400).json({ success: false, error: 'New password required' });
+  updateUserPassword(req.params.id, newPassword);
+  const user = getUserById(req.params.id);
+  logLoginAction(req.user.id, req.user.username, 'admin_reset_password', `Reset password for ${user ? user.username : req.params.id}`, req.ip);
+  res.json({ success: true, message: 'Password reset' });
+});
+
+// Admin: delete user
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, (req, res) => {
+  const result = deleteUser(req.params.id);
+  if (result.success) {
+    logLoginAction(req.user.id, req.user.username, 'admin_delete_user', `Deleted user ${req.params.id}`, req.ip);
+  }
+  res.json(result);
+});
+
+// Admin: activity logs
+app.get('/api/admin/logs', requireAuth, requireAdmin, (req, res) => {
+  const limit = parseInt(req.query.limit) || 100;
+  const logs = getLoginLogs(limit);
+  res.json({ success: true, logs });
+});
+
+// Admin: metrics
+app.get('/api/admin/metrics', requireAuth, requireAdmin, (req, res) => {
+  const db = getDB();
+  const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
+  const totalAccounts = db.prepare('SELECT COUNT(*) as count FROM accounts').get().count;
+  const totalServers = db.prepare('SELECT COUNT(*) as count FROM servers').get().count;
+  const totalProxies = db.prepare('SELECT COUNT(*) as count FROM proxies').get().count;
   res.json({
     success: true,
-    discordClientId: process.env.DISCORD_CLIENT_ID || '123456789012345678',
-    ownerDiscordId: OWNER_DISCORD_ID
+    metrics: { totalUsers, totalAccounts, totalServers, totalProxies }
   });
 });
 
-// 2. REAL MOJANG BEARER TOKEN VERIFICATION ENDPOINT
+// ─── USER ROUTES (self-service) ────────────────────────────
+
+// User: change own password
+app.post('/api/user/change-password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Current and new password required' });
+  }
+  const { verifyPassword } = require('./src/auth');
+  const db = getDB();
+  const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+  if (!verifyPassword(currentPassword, fullUser.password_hash)) {
+    return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+  }
+  updateUserPassword(req.user.id, newPassword);
+  logLoginAction(req.user.id, req.user.username, 'password_changed', 'Changed own password', req.ip);
+  res.json({ success: true, message: 'Password updated' });
+});
+
+// ─── MOJANG TOKEN VERIFICATION ─────────────────────────────
+
 app.post('/api/accounts/lookup-ssid', async (req, res) => {
   let { sessionToken } = req.body;
   if (!sessionToken) {
@@ -75,7 +237,6 @@ app.post('/api/accounts/lookup-ssid', async (req, res) => {
   const cleanToken = sanitizeToken(sessionToken);
 
   try {
-    // Official Mojang Profile Verification API
     const mojangRes = await fetch('https://api.minecraftservices.com/minecraft/profile', {
       headers: {
         'Authorization': `Bearer ${cleanToken}`,
@@ -127,113 +288,17 @@ app.post('/api/accounts/lookup-ssid', async (req, res) => {
   }
 });
 
-// 3. DISCORD OAUTH2 ROUTES
-app.get('/api/auth/discord', (req, res) => {
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  if (!clientId) {
-    return res.status(500).json({ success: false, error: 'DISCORD_CLIENT_ID is not configured on the server.' });
-  }
-  const redirectUri = process.env.DISCORD_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/callback`;
-  const encodedRedirectUri = encodeURIComponent(redirectUri);
-  const discordAuthUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${encodedRedirectUri}&response_type=code&scope=identify%20guilds`;
-  res.redirect(discordAuthUrl);
-});
+// ─── ACCOUNTS CRUD (user-scoped) ───────────────────────────
 
-app.get('/api/auth/callback', async (req, res) => {
-  const { code } = req.query;
-  const clientId = process.env.DISCORD_CLIENT_ID;
-  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const redirectUri = process.env.DISCORD_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/auth/callback`;
-
-  if (!code) {
-    return res.redirect('/login.html?error=no_code_provided');
-  }
-
-  try {
-    let discordUser = null;
-
-    if (clientId && clientSecret) {
-      const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          grant_type: 'authorization_code',
-          code: code,
-          redirect_uri: redirectUri
-        })
-      });
-
-      const tokenData = await tokenResponse.json();
-      if (!tokenData.access_token) {
-        throw new Error(tokenData.error_description || 'Failed to exchange Discord authorization code');
-      }
-
-      const userResponse = await fetch('https://discord.com/api/users/@me', {
-        headers: { Authorization: `Bearer ${tokenData.access_token}` }
-      });
-      discordUser = await userResponse.json();
-    } else {
-      discordUser = {
-        id: '102938475619283746',
-        username: 'DiscordPlayer',
-        discriminator: '0001',
-        avatar: null
-      };
-    }
-
-    const isOwner = (discordUser.id === OWNER_DISCORD_ID);
-    const userObj = {
-      id: discordUser.id,
-      username: discordUser.global_name || discordUser.username,
-      discriminator: discordUser.discriminator || '0000',
-      avatar: discordUser.avatar 
-        ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` 
-        : `https://cdn.discordapp.com/embed/avatars/0.png`,
-      isOwner: isOwner,
-      authTime: new Date().toISOString()
-    };
-
-    res.redirect(`/login.html?user=${encodeURIComponent(JSON.stringify(userObj))}`);
-  } catch (err) {
-    console.error('[Discord OAuth Error]', err.message);
-    res.redirect(`/login.html?error=${encodeURIComponent(err.message)}`);
-  }
-});
-
-// 4. OWNER ADMIN TELEMETRY
-app.get('/api/admin/metrics', requireAuth, (req, res) => {
-  const requestingUserId = req.headers['x-user-id'];
-  if (requestingUserId !== OWNER_DISCORD_ID) {
-    return res.status(403).json({ success: false, error: 'Forbidden: Admin access restricted to platform owner.' });
-  }
-
-  const db = getDB();
-  const totalAccounts = db.prepare('SELECT COUNT(*) as count FROM accounts').get();
-  const totalServers = db.prepare('SELECT COUNT(*) as count FROM servers').get();
-
-  res.json({
-    success: true,
-    telemetry: {
-      totalRegisteredUsers: 14,
-      totalLinkedAccounts: totalAccounts.count || 29,
-      activeBotInstances: 8,
-      totalConfiguredServers: totalServers.count || 12
-    }
-  });
-});
-
-// 5. USER ISOLATED ACCOUNTS API
 app.get('/api/accounts', requireAuth, (req, res) => {
-  const userId = req.headers['x-user-id'] || 'default_user';
+  const userId = req.user.id;
   const db = getDB();
   const accounts = db.prepare('SELECT id, username, uuid, status, created_at FROM accounts WHERE user_id = ?').all(userId);
   res.json({ success: true, data: accounts });
 });
 
 app.post('/api/accounts/link', requireAuth, (req, res) => {
-  const userId = req.headers['x-user-id'] || 'default_user';
+  const userId = req.user.id;
   const { sessionToken, username, uuid } = req.body;
 
   if (!sessionToken) {
@@ -251,11 +316,12 @@ app.post('/api/accounts/link', requireAuth, (req, res) => {
     VALUES (?, ?, ?, ?, ?, 'authenticated')
   `).run(id, userId, finalUsername, finalUUID, encrypted);
 
+  logLoginAction(userId, req.user.username, 'account_linked', `Linked MC account: ${finalUsername}`, req.ip);
   res.json({ success: true, account: { id, username: finalUsername, uuid: finalUUID, status: 'authenticated' } });
 });
 
 app.post('/api/accounts/:id/reauth', requireAuth, (req, res) => {
-  const userId = req.headers['x-user-id'] || 'default_user';
+  const userId = req.user.id;
   const { sessionToken } = req.body;
 
   if (!sessionToken) {
@@ -271,7 +337,75 @@ app.post('/api/accounts/:id/reauth', requireAuth, (req, res) => {
   res.json({ success: true, message: 'Account session token refreshed' });
 });
 
-// 6. WEBSOCKET REAL-TIME GATEWAY
+app.delete('/api/accounts/:id', requireAuth, (req, res) => {
+  const userId = req.user.id;
+  const db = getDB();
+  db.prepare('DELETE FROM accounts WHERE id = ? AND user_id = ?').run(req.params.id, userId);
+  res.json({ success: true });
+});
+
+// ─── SERVERS CRUD ──────────────────────────────────────────
+
+app.get('/api/servers', requireAuth, (req, res) => {
+  const db = getDB();
+  const servers = db.prepare('SELECT * FROM servers WHERE user_id = ?').all(req.user.id);
+  res.json({ success: true, data: servers });
+});
+
+app.post('/api/servers', requireAuth, (req, res) => {
+  const { name, host, port, version } = req.body;
+  if (!name || !host) return res.status(400).json({ success: false, error: 'Name and host required' });
+  const id = String(Date.now());
+  const db = getDB();
+  db.prepare('INSERT INTO servers (id, user_id, name, host, port, version) VALUES (?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, host, port || 25565, version || '1.21.1');
+  res.json({ success: true, server: { id, name, host, port: port || 25565, version: version || '1.21.1' } });
+});
+
+app.put('/api/servers/:id', requireAuth, (req, res) => {
+  const { name, host, port, version } = req.body;
+  const db = getDB();
+  db.prepare('UPDATE servers SET name = ?, host = ?, port = ?, version = ? WHERE id = ? AND user_id = ?').run(name, host, port, version, req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+app.delete('/api/servers/:id', requireAuth, (req, res) => {
+  const db = getDB();
+  db.prepare('DELETE FROM servers WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+// ─── PROXIES CRUD ──────────────────────────────────────────
+
+app.get('/api/proxies', requireAuth, (req, res) => {
+  const db = getDB();
+  const proxies = db.prepare('SELECT * FROM proxies WHERE user_id = ?').all(req.user.id);
+  res.json({ success: true, data: proxies });
+});
+
+app.post('/api/proxies', requireAuth, (req, res) => {
+  const { name, type, host, port, auth } = req.body;
+  if (!name || !type || !host || !port) return res.status(400).json({ success: false, error: 'All fields required' });
+  const id = String(Date.now());
+  const db = getDB();
+  db.prepare('INSERT INTO proxies (id, user_id, name, type, host, port, auth) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, type, host, port, auth || 'None');
+  res.json({ success: true, proxy: { id, name, type, host, port, auth: auth || 'None' } });
+});
+
+app.put('/api/proxies/:id', requireAuth, (req, res) => {
+  const { name, type, host, port, auth } = req.body;
+  const db = getDB();
+  db.prepare('UPDATE proxies SET name = ?, type = ?, host = ?, port = ?, auth = ? WHERE id = ? AND user_id = ?').run(name, type, host, port, auth, req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+app.delete('/api/proxies/:id', requireAuth, (req, res) => {
+  const db = getDB();
+  db.prepare('DELETE FROM proxies WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+// ─── WEBSOCKET REAL-TIME GATEWAY ───────────────────────────
+
 wss.on('connection', (ws) => {
   ws.send(JSON.stringify({ type: 'welcome', message: 'Connected to Pie MC Realtime Gateway' }));
 
@@ -280,7 +414,6 @@ wss.on('connection', (ws) => {
       const payload = JSON.parse(data);
 
       if (payload.type === 'start_bot') {
-        // Frontend sends full bot config when starting an instance
         const inst = botManager.getOrCreateInstance(
           payload.userId || 'default',
           payload.instanceId,
@@ -306,15 +439,15 @@ wss.on('connection', (ws) => {
   });
 });
 
+// ─── START SERVER ──────────────────────────────────────────
+
 initDatabase();
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-======================================================`);
-  console.log(`🥧 Pie MC Realtime Server listening on http://localhost:${PORT}`);
-  console.log(`   - Mojang Profile Verification: Active (api.minecraftservices.com)`);
-  console.log(`   - Owner Discord ID: ${OWNER_DISCORD_ID}`);
+  console.log(`\n======================================================`);
+  console.log(`Pie MC Server listening on http://localhost:${PORT}`);
+  console.log(`   - Auth: Username/Password (bcrypt)`);
+  console.log(`   - Admin: admin@autopie.site`);
   console.log(`   - Token Cryptography: AES-256-GCM`);
-  console.log(`======================================================
-`);
+  console.log(`======================================================\n`);
 });

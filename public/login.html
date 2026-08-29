@@ -6,7 +6,6 @@
   <title>Pie MC — Sign In</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
-  <script src="shared.js"></script>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4 bg-[#090b10] relative overflow-hidden">
 
@@ -28,132 +27,172 @@
       </div>
     </div>
 
-    <!-- Login Description -->
-    <div class="p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333] text-xs text-slate-300 space-y-1">
-      <p class="font-semibold text-white">Sign In Required</p>
-      <p class="text-slate-400 leading-relaxed">
-        Connect your Discord account to manage your bot instances, servers, and proxies.
-      </p>
-    </div>
+    <!-- Login Form -->
+    <div id="loginSection" class="space-y-4">
+      <div id="errorMsg" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono"></div>
 
-    <!-- Single Discord Login Button -->
-    <div class="space-y-3">
-      <button id="btnLoginDiscord" onclick="startDiscordOAuth()" class="w-full py-3.5 px-4 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-3 transition-all transform active:scale-95">
-        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
-        <span>Login with Discord</span>
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email</label>
+        <input id="loginEmail" type="email" placeholder="you@example.com" class="pie-input w-full font-mono" autocomplete="email">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+        <input id="loginPassword" type="password" placeholder="••••••••" class="pie-input w-full font-mono" autocomplete="current-password">
+      </div>
+
+      <button onclick="handleLogin()" class="w-full py-3.5 px-4 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center space-x-3 transition-all transform active:scale-95">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+        <span>Sign In</span>
       </button>
 
-      <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1">
-        <button onclick="openDiscordConfigModal()" class="hover:text-slate-300 underline">OAuth Configuration</button>
-        <span>Encrypted Storage</span>
+      <div class="text-center">
+        <button onclick="showRegister()" class="text-xs text-slate-400 hover:text-[#2cf5d6] transition-colors">
+          Don't have an account? <span class="font-semibold">Create one</span>
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- Discord Client ID Settings Modal -->
-  <div id="discordConfigModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="pie-card p-6 max-w-md w-full space-y-4 border border-[#1c2333] shadow-2xl">
-      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
-        <h3 class="text-base font-bold text-white">Discord App Settings</h3>
-        <button onclick="closeModal('discordConfigModal')" class="text-slate-400 hover:text-white">&times;</button>
+    <!-- Register Form (hidden by default) -->
+    <div id="registerSection" class="hidden space-y-4">
+      <div id="regErrorMsg" class="hidden p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono"></div>
+      <div id="regSuccessMsg" class="hidden p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-mono"></div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Username</label>
+        <input id="regUsername" type="text" placeholder="yourname" class="pie-input w-full font-mono">
       </div>
 
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-300 mb-1">Discord Client ID</label>
-          <input id="cfgClientId" type="text" placeholder="e.g. 123456789012345678" class="pie-input w-full font-mono">
-        </div>
-        <div>
-          <label class="block font-semibold text-slate-300 mb-1">Owner Discord ID</label>
-          <input id="cfgOwnerId" type="text" placeholder="e.g. 987654321098765432" class="pie-input w-full font-mono">
-          <p class="text-[11px] text-slate-500 mt-1">This user ID automatically unlocks Owner Admin access upon login.</p>
-        </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email</label>
+        <input id="regEmail" type="email" placeholder="you@example.com" class="pie-input w-full font-mono">
       </div>
 
-      <div class="flex items-center justify-end space-x-3 pt-2">
-        <button onclick="closeModal('discordConfigModal')" class="btn-secondary text-xs">Cancel</button>
-        <button onclick="saveDiscordConfig()" class="btn-primary text-xs">Save & Continue</button>
+      <div>
+        <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+        <input id="regPassword" type="password" placeholder="••••••••" class="pie-input w-full font-mono">
       </div>
+
+      <button onclick="handleRegister()" class="w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all transform active:scale-95">
+        Create Account
+      </button>
+
+      <div class="text-center">
+        <button onclick="showLogin()" class="text-xs text-slate-400 hover:text-[#2cf5d6] transition-colors">
+          Already have an account? <span class="font-semibold">Sign in</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex items-center justify-center text-[11px] font-mono text-slate-500 pt-1">
+      <span>Encrypted Storage</span>
     </div>
   </div>
 
   <script>
-    function getOwnerDiscordId() {
-      return localStorage.getItem('PIE_MC_OWNER_ID') || '987654321098765432';
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+    function hideError(id) {
+      document.getElementById(id).classList.add('hidden');
     }
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const hash = window.location.hash;
-      const params = new URLSearchParams(window.location.search);
+    function showLogin() {
+      document.getElementById('loginSection').classList.remove('hidden');
+      document.getElementById('registerSection').classList.add('hidden');
+    }
+    function showRegister() {
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('registerSection').classList.remove('hidden');
+    }
 
-      if (params.get('user')) {
-        try {
-          const userObj = JSON.parse(decodeURIComponent(params.get('user')));
-          finalizeLogin(userObj);
-          return;
-        } catch (e) {}
+    async function handleLogin() {
+      hideError('errorMsg');
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+
+      if (!email || !password) {
+        showError('errorMsg', 'Email and password are required');
+        return;
       }
-    });
-
-    async function handleDiscordToken(token) {
-      const btn = document.getElementById('btnLoginDiscord');
-      btn.disabled = true;
 
       try {
-        const res = await fetch('https://discord.com/api/users/@me', {
-          headers: { 'Authorization': `Bearer ${token}` }
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
+        const data = await res.json();
 
-        if (!res.ok) throw new Error('Failed to fetch Discord profile');
-        const discordUser = await res.json();
+        if (!data.success) {
+          showError('errorMsg', data.error || 'Login failed');
+          return;
+        }
 
-        const ownerId = getOwnerDiscordId();
-        const isOwner = (discordUser.id === ownerId);
-
-        const userObj = {
-          id: discordUser.id,
-          username: discordUser.global_name || discordUser.username,
-          discriminator: discordUser.discriminator || '0000',
-          avatar: discordUser.avatar 
-            ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` 
-            : `https://cdn.discordapp.com/embed/avatars/0.png`,
-          isOwner: isOwner,
-          authTime: new Date().toISOString()
-        };
-
-        finalizeLogin(userObj);
+        // Store user session
+        localStorage.setItem('PIE_MC_USER', JSON.stringify(data.user));
+        window.location.href = data.user.role === 'admin' ? 'admin.html' : 'dashboard.html';
       } catch (err) {
-        alert('Discord login error: ' + err.message);
-        btn.disabled = false;
+        showError('errorMsg', 'Connection error: ' + err.message);
       }
     }
 
-    function finalizeLogin(userObj) {
-      setCurrentUser(userObj);
-      window.history.replaceState({}, document.title, window.location.pathname);
-      window.location.href = userObj.isOwner ? 'admin.html' : 'dashboard.html';
+    async function handleRegister() {
+      hideError('regErrorMsg');
+      hideError('regSuccessMsg');
+      const username = document.getElementById('regUsername').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value;
+
+      if (!username || !email || !password) {
+        showError('regErrorMsg', 'All fields are required');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password })
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+          showError('regErrorMsg', data.error || 'Registration failed');
+          return;
+        }
+
+        document.getElementById('regSuccessMsg').textContent = 'Account created! Signing in...';
+        document.getElementById('regSuccessMsg').classList.remove('hidden');
+
+        // Auto-login after register
+        const loginRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const loginData = await loginRes.json();
+        if (loginData.success) {
+          localStorage.setItem('PIE_MC_USER', JSON.stringify(loginData.user));
+          window.location.href = 'dashboard.html';
+        }
+      } catch (err) {
+        showError('regErrorMsg', 'Connection error: ' + err.message);
+      }
     }
 
-    function startDiscordOAuth() {
-      window.location.href = '/api/auth/discord';
-    }
-
-    function openDiscordConfigModal() {
-      document.getElementById('cfgClientId').value = getDiscordClientId();
-      document.getElementById('cfgOwnerId').value = getOwnerDiscordId();
-      openModal('discordConfigModal');
-    }
-
-    function saveDiscordConfig() {
-      const cid = document.getElementById('cfgClientId').value.trim();
-      const oid = document.getElementById('cfgOwnerId').value.trim();
-
-      if (cid) localStorage.setItem('PIE_MC_DISCORD_CLIENT_ID', cid);
-      if (oid) localStorage.setItem('PIE_MC_OWNER_ID', oid);
-
-      closeModal('discordConfigModal');
-      startDiscordOAuth();
-    }
+    // Enter key support
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        if (!document.getElementById('loginSection').classList.contains('hidden')) {
+          handleLogin();
+        } else {
+          handleRegister();
+        }
+      }
+    });
   </script>
 </body>
 </html>

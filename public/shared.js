@@ -21,7 +21,16 @@ const ICONS = {
   trash: `<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`
 };
 
-const OWNER_DISCORD_ID = '987654321098765432';
+// Auth helpers for API calls
+function authHeaders() {
+  const user = getCurrentUser();
+  return user ? { 'x-user-id': user.id } : {};
+}
+
+function isAdmin() {
+  const user = getCurrentUser();
+  return user && user.role === 'admin';
+}
 
 // Platform Configuration & Separate Session / Token Expiry Settings
 const DEFAULT_PLATFORM_FLAGS = {
@@ -78,7 +87,7 @@ function checkAuth() {
     const authTime = user.authTime ? new Date(user.authTime).getTime() : Date.now();
     const elapsedHours = (Date.now() - authTime) / (3600 * 1000);
 
-    const isOwner = (user.id === OWNER_DISCORD_ID || user.isOwner);
+    const isOwner = (user.role === 'admin');
 
     // Regular User Auto-Logout Enforcement (Default 24h)
     if (!isOwner && flags.userAutoLogoutEnabled && elapsedHours >= flags.userSessionDurationHours) {
@@ -103,7 +112,12 @@ function checkAuth() {
 function getCurrentUser() {
   try {
     const raw = localStorage.getItem('PIE_MC_USER');
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const user = JSON.parse(raw);
+      // Redirect to login if session expired or no user
+      if (!user || !user.id) return null;
+      return user;
+    }
   } catch (e) {}
   return null;
 }
@@ -119,42 +133,12 @@ function setCurrentUser(user) {
 }
 
 
-// Dynamic Directory & Telemetry Engine (Scans all local tenant partitions)
-window.registerUserDirectory = function(user) {
-  if (!user || !user.id) return;
-  const list = JSON.parse(localStorage.getItem('PIE_MC_REGISTERED_USERS') || '[]');
-  const idx = list.findIndex(u => u.id === user.id);
-  if (idx === -1) {
-    list.push({
-      id: user.id,
-      username: user.username,
-      joined: new Date().toISOString().split('T')[0],
-      isOwner: user.isOwner || (user.id === OWNER_DISCORD_ID)
-    });
-  } else {
-    list[idx].username = user.username;
-    list[idx].isOwner = user.isOwner || (user.id === OWNER_DISCORD_ID);
-  }
-  localStorage.setItem('PIE_MC_REGISTERED_USERS', JSON.stringify(list));
-};
-
+// User directory is now server-side via admin API
+window.registerUserDirectory = function(user) {};
 window.getDynamicTelemetry = function() {
-  let list = JSON.parse(localStorage.getItem('PIE_MC_REGISTERED_USERS') || '[]');
-  
-  // If empty, ensure Owner and current user are registered
   const curUser = getCurrentUser();
-  if (list.length === 0) {
-    list = [
-      { id: OWNER_DISCORD_ID, username: 'PieOwner', joined: '2026-08-01', isOwner: true }
-    ];
-    if (curUser && curUser.id !== OWNER_DISCORD_ID) {
-      list.push({ id: curUser.id, username: curUser.username, joined: new Date().toISOString().split('T')[0], isOwner: false });
-    }
-    localStorage.setItem('PIE_MC_REGISTERED_USERS', JSON.stringify(list));
-  } else if (curUser && !list.some(u => u.id === curUser.id)) {
-    list.push({ id: curUser.id, username: curUser.username, joined: new Date().toISOString().split('T')[0], isOwner: curUser.isOwner || false });
-    localStorage.setItem('PIE_MC_REGISTERED_USERS', JSON.stringify(list));
-  }
+  return { totalUsers: 1, totalAccounts: 0, activeBots: 0 };
+};
 
   let totalAccounts = 0;
   let activeBots = 0;
@@ -187,7 +171,7 @@ window.getDynamicTelemetry = function() {
       joined: u.joined || '2026-08-29',
       accountsCount: accCount,
       instancesCount: instCount,
-      isOwner: u.isOwner || (u.id === OWNER_DISCORD_ID)
+      isOwner: u.role === 'admin'
     };
   });
 
@@ -239,7 +223,7 @@ function getStoredState() {
       
       // Check token expiry ages
       const flags = getPlatformFlags();
-      const isOwner = (user.id === OWNER_DISCORD_ID || user.isOwner);
+      const isOwner = (user.role === 'admin');
       const tokenAgeLimitHours = isOwner ? flags.adminTokenAgeHours : flags.userTokenAgeHours;
       const shouldClean = isOwner ? flags.adminTokenCleanEnabled : flags.userTokenCleanEnabled;
 
@@ -490,7 +474,7 @@ window.renderGlobalHeader = function(activePage) {
   const user = checkAuth();
   if (!user && !window.location.pathname.endsWith('login.html') && !window.location.pathname.endsWith('404.html')) return;
 
-  const isOwner = user && (user.id === OWNER_DISCORD_ID || user.isOwner);
+  const isOwner = user && user.role === 'admin';
 
   const pages = [
     { id: 'dashboard', label: 'Dashboard', href: 'dashboard.html', icon: ICONS.dashboard },
@@ -500,8 +484,8 @@ window.renderGlobalHeader = function(activePage) {
     { id: 'proxies', label: 'Proxies', href: 'proxies.html', icon: ICONS.proxies },
     { id: 'automation', label: 'Automation', href: 'automation.html', icon: ICONS.automation },
     { id: 'triggers', label: 'Triggers', href: 'triggers.html', icon: ICONS.triggers },
-    { id: 'discord', label: 'Discord', href: 'discord.html', icon: ICONS.discord },
-    { id: 'logs', label: 'Logs', href: 'logs.html', icon: ICONS.logs }
+    { id: 'logs', label: 'Logs', href: 'logs.html', icon: ICONS.logs },
+    { id: 'settings', label: 'Settings', href: 'settings.html', icon: ICONS.settings }
   ];
 
   if (isOwner) {
@@ -536,16 +520,16 @@ window.renderGlobalHeader = function(activePage) {
       <div class="flex items-center space-x-3">
         ${user ? `
           <div class="flex items-center space-x-2.5 px-3 py-1.5 rounded-xl bg-[#0f131d] border border-[#1c2333] text-xs">
-            <img src="${user.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" class="w-6 h-6 rounded-full border border-[#2cf5d6]/40" alt="">
+            <div class="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-[#2cf5d6] flex items-center justify-center text-[10px] font-black text-[#090b10]">${user.username.charAt(0).toUpperCase()}</div>
             <span class="font-bold text-white">${user.username}</span>
-            ${isOwner ? `<span class="badge-diamond text-[9px] px-1.5 py-0.5">OWNER</span>` : ''}
+            ${isOwner ? `<span class="badge-diamond text-[9px] px-1.5 py-0.5">ADMIN</span>` : ''}
           </div>
           <button onclick="logout()" class="btn-secondary text-xs px-3 py-1.5 text-red-400 hover:text-red-300" title="Sign Out">
             ${ICONS.logout}
             <span class="hidden sm:inline">Logout</span>
           </button>
         ` : `
-          <a href="login.html" class="btn-primary text-xs px-4 py-2">Login with Discord</a>
+          <a href="login.html" class="btn-primary text-xs px-4 py-2">Login</a>
         `}
 
         <a href="settings.html" class="p-2.5 rounded-xl bg-[#0f131d] hover:bg-slate-800 border border-[#1c2333] hover:border-[#2cf5d6]/40 text-slate-300 hover:text-white transition-all shadow-sm flex items-center justify-center" title="Settings">

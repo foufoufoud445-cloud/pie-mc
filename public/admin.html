@@ -3,483 +3,472 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pie MC — Admin Console</title>
+  <title>Pie MC — Admin Panel</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="styles.css">
   <script src="shared.js"></script>
 </head>
-<body>
-  <div id="header-mount"></div>
+<body class="bg-[#090b10] min-h-screen text-white">
 
-  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
-    <!-- Admin Hero Banner -->
-    <div class="pie-card p-6 space-y-4 border border-[#2cf5d6]/30 shadow-2xl">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="flex items-center space-x-3">
-          <div class="w-12 h-12 rounded-xl bg-[#2cf5d6]/10 text-[#2cf5d6] border border-[#2cf5d6]/30 flex items-center justify-center">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+  <!-- Header -->
+  <header class="border-b border-[#1c2333] bg-[#0a0d14]/80 backdrop-blur-xl sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 via-[#2cf5d6] to-emerald-400 p-0.5">
+          <div class="w-full h-full bg-[#090b10] rounded-[10px] flex items-center justify-center">
+            <span class="text-lg font-black bg-gradient-to-r from-[#2cf5d6] to-emerald-400 bg-clip-text text-transparent">π</span>
           </div>
-          <div>
-            <div class="flex items-center space-x-2">
-              <h1 class="text-2xl font-black text-white">Owner Admin Console</h1>
-              <span class="badge-diamond text-xs font-mono">ADMIN ACCESS</span>
-            </div>
-            <p class="text-xs text-slate-400 font-mono mt-0.5">Database storage mode, platform controls, and user counts</p>
-          </div>
-        </div>
-        <a href="dashboard.html" class="btn-secondary text-xs px-4 py-2 no-underline">
-          &larr; Back to Dashboard
-        </a>
-      </div>
-
-      <!-- Privacy Notice -->
-      <div class="p-3.5 rounded-xl bg-[#0a0d14] border border-cyan-500/30 flex items-start space-x-3 text-xs">
-        <svg class="w-5 h-5 text-cyan-400 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        <div class="text-slate-300 leading-relaxed">
-          <strong class="text-[#2cf5d6]">Privacy Notice:</strong>
-          <span> Account tokens, passwords, and Minecraft player names remain private and encrypted. Only platform counts and user quantities are visible.</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Platform Stats -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="pie-card p-4 flex items-center space-x-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
         </div>
         <div>
-          <div class="text-2xl font-black text-white" id="teleTotalUsers">14</div>
-          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Users</div>
+          <h1 class="text-sm font-black text-white tracking-wider">ADMIN PANEL</h1>
+          <p class="text-[10px] text-slate-500 font-mono">Pie MC Management</p>
         </div>
       </div>
-
-      <div class="pie-card p-4 flex items-center space-x-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        </div>
-        <div>
-          <div class="text-2xl font-black text-white" id="teleTotalAccounts">29</div>
-          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Linked Accounts</div>
-        </div>
+      <div class="flex items-center space-x-3">
+        <span id="adminName" class="text-xs text-slate-400 font-mono"></span>
+        <a href="settings.html" class="text-xs text-slate-400 hover:text-[#2cf5d6] font-mono">Settings</a>
+        <button onclick="logout()" class="text-xs text-red-400 hover:text-red-300 font-mono">Logout</button>
       </div>
+    </div>
+  </header>
 
-      <div class="pie-card p-4 flex items-center space-x-4">
-        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[#2cf5d6]">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-        </div>
-        <div>
-          <div class="text-2xl font-black text-white" id="teleActiveBots">8</div>
-          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Bots</div>
-        </div>
-      </div>
+  <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
-      <div class="pie-card p-4 flex items-center space-x-4">
-        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
+    <!-- Tab Navigation -->
+    <div class="flex space-x-1 bg-[#0a0d14] rounded-xl p-1 border border-[#1c2333]">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active">Dashboard</button>
+      <button onclick="switchTab('users')" id="tab-users" class="tab-btn">Users</button>
+      <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn">Activity Logs</button>
+      <button onclick="switchTab('userdata')" id="tab-userdata" class="tab-btn">User Data</button>
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="panel-dashboard" class="tab-panel">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="pie-card p-4 text-center">
+          <p class="text-2xl font-black text-[#2cf5d6]" id="metricUsers">0</p>
+          <p class="text-xs text-slate-400 mt-1">Total Users</p>
         </div>
-        <div>
-          <div class="text-2xl font-black text-white" id="teleTotalServers">12</div>
-          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Servers</div>
+        <div class="pie-card p-4 text-center">
+          <p class="text-2xl font-black text-[#2cf5d6]" id="metricAccounts">0</p>
+          <p class="text-xs text-slate-400 mt-1">Linked Accounts</p>
+        </div>
+        <div class="pie-card p-4 text-center">
+          <p class="text-2xl font-black text-[#2cf5d6]" id="metricServers">0</p>
+          <p class="text-xs text-slate-400 mt-1">Servers</p>
+        </div>
+        <div class="pie-card p-4 text-center">
+          <p class="text-2xl font-black text-[#2cf5d6]" id="metricProxies">0</p>
+          <p class="text-xs text-slate-400 mt-1">Proxies</p>
         </div>
       </div>
     </div>
 
-    <!-- TRI-MODE DATABASE ENGINE MANAGER -->
-    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
-      <div class="flex items-center justify-between pb-3 border-b border-[#1c2333]">
-        <div class="flex items-center space-x-2.5">
-          <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
-          <h2 class="text-lg font-bold text-white">Database Storage Engine</h2>
-        </div>
-        <span id="activeDbBadge" class="badge-diamond font-mono text-xs uppercase">SQLITE ACTIVE</span>
+    <!-- Users Tab -->
+    <div id="panel-users" class="tab-panel hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">User Management</h2>
+        <button onclick="openCreateUserModal()" class="btn-primary text-xs">+ Create User</button>
       </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div onclick="selectDbMode('local_json')" id="cardModeJson" class="pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white text-sm">1. Local JSON</span>
-            <input type="radio" name="dbRadio" id="radioJson" class="text-[#2cf5d6]">
-          </div>
-          <p class="text-xs text-slate-400">
-            Stores data in <code>backend/data/json_store/</code>. Zero-dependency flat files.
-          </p>
-        </div>
-
-        <div onclick="selectDbMode('sqlite')" id="cardModeSqlite" class="pie-card-inner p-4 cursor-pointer border border-[#2cf5d6]/40 bg-[#2cf5d6]/5 transition-all space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white text-sm">2. SQLite</span>
-            <input type="radio" name="dbRadio" id="radioSqlite" checked class="text-[#2cf5d6]">
-          </div>
-          <p class="text-xs text-slate-400">
-            Fast embedded database in <code>pie-mc.db</code>. Recommended for VPS installs.
-          </p>
-        </div>
-
-        <div onclick="selectDbMode('turso')" id="cardModeTurso" class="pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white text-sm">3. Turso (libSQL)</span>
-            <input type="radio" name="dbRadio" id="radioTurso" class="text-[#2cf5d6]">
-          </div>
-          <p class="text-xs text-slate-400">
-            Serverless cloud database with remote backups and edge replication.
-          </p>
-        </div>
-      </div>
-
-      <div id="dbConfigDetails" class="space-y-4 pt-2">
-        <div id="tursoFields" class="hidden space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
-          <div class="space-y-1">
-            <label class="block text-xs font-semibold text-slate-300">TURSO_DATABASE_URL</label>
-            <input id="inputTursoUrl" type="text" placeholder="libsql://your-db.turso.io" class="pie-input w-full font-mono text-xs">
-          </div>
-          <div class="space-y-1">
-            <label class="block text-xs font-semibold text-slate-300">TURSO_AUTH_TOKEN</label>
-            <input id="inputTursoToken" type="password" placeholder="Paste Turso Auth Token..." class="pie-input w-full font-mono text-xs text-[#2cf5d6]">
-          </div>
-        </div>
-
-        <div id="sqliteFields" class="space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
-          <div class="space-y-1">
-            <label class="block text-xs font-semibold text-slate-300">SQLite Database Path</label>
-            <input id="inputSqlitePath" type="text" value="backend/data/pie-mc.db" class="pie-input w-full font-mono text-xs">
-          </div>
-        </div>
-
-        <div id="jsonFields" class="hidden space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
-          <div class="space-y-1">
-            <label class="block text-xs font-semibold text-slate-300">JSON Directory Path</label>
-            <input id="inputJsonPath" type="text" value="backend/data/json_store/" class="pie-input w-full font-mono text-xs">
-          </div>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-end space-x-3 pt-2">
-        <button onclick="applyDatabaseConfig()" class="btn-primary">
-          <span>Set Database & Create Tables</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- OWNER PLATFORM FEATURE TOGGLES -->
-    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
-      <div class="flex items-center space-x-2.5 pb-3 border-b border-[#1c2333]">
-        <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-        <h2 class="text-lg font-bold text-white">Platform Settings & Controls</h2>
-      </div>
-
-      <div class="space-y-4">
-        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-3">
-          <label class="flex items-center justify-between cursor-pointer">
-            <div>
-              <span class="font-bold text-white text-sm block">Allow Users to Change Minecraft Version</span>
-              <span class="text-xs text-slate-400">When disabled, users are locked to your chosen Minecraft version.</span>
-            </div>
-            <input type="checkbox" id="flagAllowVersion" onchange="toggleVersionSelectorVisibility(this.checked)" checked class="w-5 h-5 rounded text-[#2cf5d6]">
-          </label>
-
-          <div id="lockedVersionBox" class="hidden pt-2 border-t border-[#1c2333] space-y-1">
-            <label class="text-xs font-semibold text-amber-400">Locked Global Version:</label>
-            <select id="selectLockedVersion" class="pie-select w-full font-mono text-xs">
-              <option value="1.21.1">1.21.1</option>
-              <option value="1.20.4">1.20.4</option>
-              <option value="1.19.4">1.19.4</option>
-              <option value="1.16.5">1.16.5</option>
-              <option value="1.8.9">1.8.9</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333]">
-          <label class="flex items-center justify-between cursor-pointer">
-            <div>
-              <span class="font-bold text-white text-sm block">Allow Auto-Reconnect</span>
-              <span class="text-xs text-slate-400">Allows bots to automatically reconnect if dropped.</span>
-            </div>
-            <input type="checkbox" id="flagAllowReconnect" checked class="w-5 h-5 rounded text-[#2cf5d6]">
-          </label>
-        </div>
-
-        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333]">
-          <label class="flex items-center justify-between cursor-pointer">
-            <div>
-              <span class="font-bold text-white text-sm block">Allow New Registrations</span>
-              <span class="text-xs text-slate-400">Allow new Discord users to sign in.</span>
-            </div>
-            <input type="checkbox" id="flagAllowRegistrations" checked class="w-5 h-5 rounded text-[#2cf5d6]">
-          </label>
-        </div>
-
-        <div class="flex justify-end pt-2">
-          <button onclick="saveOwnerFlags()" class="btn-primary text-xs">
-            Save Settings
-          </button>
-        </div>
-      </div>
-    </div>
-
-    
-    <!-- SEPARATE SESSION & TOKEN LIFETIME MANAGER (ADMIN VS USERS) -->
-    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
-      <div class="flex items-center space-x-2.5 pb-3 border-b border-[#1c2333]">
-        <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        <h2 class="text-lg font-bold text-white">Session Duration & Token Cleanup Lifetimes</h2>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Regular Users Section -->
-        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-4">
-          <div class="flex items-center justify-between pb-2 border-b border-[#1c2333]">
-            <h3 class="font-bold text-white text-sm">Regular Users Policy</h3>
-            <span class="badge-diamond text-[10px]">CLIENTS</span>
-          </div>
-
-          <!-- User Auto-Logout -->
-          <div class="space-y-2">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-xs font-semibold text-slate-300">Auto-Logout Users after Duration</span>
-              <input type="checkbox" id="chkUserAutoLogout" checked class="w-4 h-4 rounded text-[#2cf5d6]">
-            </label>
-            <div class="flex items-center space-x-2">
-              <input id="inputUserSessionHours" type="number" value="24" class="pie-input w-24 text-xs font-mono">
-              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
-            </div>
-            <p class="text-[11px] text-slate-500 font-mono">Users must re-login via Discord after this period. Saved bots/data are preserved.</p>
-          </div>
-
-          <!-- User Token Cleanup -->
-          <div class="space-y-2 pt-2 border-t border-[#1c2333]">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-xs font-semibold text-slate-300">Clean/Expire Minecraft Tokens after Age</span>
-              <input type="checkbox" id="chkUserTokenClean" checked class="w-4 h-4 rounded text-[#2cf5d6]">
-            </label>
-            <div class="flex items-center space-x-2">
-              <input id="inputUserTokenAge" type="number" value="24" class="pie-input w-24 text-xs font-mono">
-              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
-            </div>
-            <p class="text-[11px] text-slate-500 font-mono">Flags tokens as Needs Re-Auth so users paste fresh SSIDs.</p>
-          </div>
-        </div>
-
-        <!-- Admin / Owner Section -->
-        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-4">
-          <div class="flex items-center justify-between pb-2 border-b border-[#1c2333]">
-            <h3 class="font-bold text-white text-sm">Platform Owner / Admin Policy</h3>
-            <span class="badge-online text-[10px]">OWNER</span>
-          </div>
-
-          <!-- Admin Auto-Logout (Default OFF) -->
-          <div class="space-y-2">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-xs font-semibold text-slate-300">Auto-Logout Admin Session</span>
-              <input type="checkbox" id="chkAdminAutoLogout" class="w-4 h-4 rounded text-[#2cf5d6]">
-            </label>
-            <div class="flex items-center space-x-2">
-              <input id="inputAdminSessionHours" type="number" value="720" class="pie-input w-24 text-xs font-mono">
-              <span class="text-xs text-slate-400 font-mono">Hours (Default: 720h / 30d)</span>
-            </div>
-            <p class="text-[11px] text-slate-500 font-mono">Disabled by default: Owner stays logged in permanently until manually logged out.</p>
-          </div>
-
-          <!-- Admin Token Cleanup -->
-          <div class="space-y-2 pt-2 border-t border-[#1c2333]">
-            <label class="flex items-center justify-between cursor-pointer">
-              <span class="text-xs font-semibold text-slate-300">Clean/Expire Admin Minecraft Tokens</span>
-              <input type="checkbox" id="chkAdminTokenClean" checked class="w-4 h-4 rounded text-[#2cf5d6]">
-            </label>
-            <div class="flex items-center space-x-2">
-              <input id="inputAdminTokenAge" type="number" value="24" class="pie-input w-24 text-xs font-mono">
-              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
-            </div>
-            <p class="text-[11px] text-slate-500 font-mono">Monitors owner bot token age and alerts when renewal is needed.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-end pt-2">
-        <button onclick="saveSessionLifetimes()" class="btn-primary text-xs">
-          Save Lifetime Policies
-        </button>
-      </div>
-    </div>
-
-<!-- USERS OVERVIEW -->
-    <div class="pie-card p-6 space-y-4 border border-[#1c2333]">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold text-white">Registered Users Overview</h2>
-      </div>
-
-      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
-        <table class="w-full text-left text-sm text-slate-300">
-          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
-            <tr>
-              <th class="px-4 py-3">Discord User</th>
-              <th class="px-4 py-3">User ID</th>
-              <th class="px-4 py-3">Joined Date</th>
-              <th class="px-4 py-3">Accounts Linked</th>
-              <th class="px-4 py-3">Instances Running</th>
+      <div class="pie-card overflow-hidden">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="border-b border-[#1c2333] text-slate-400">
+              <th class="px-4 py-3 text-left">Username</th>
+              <th class="px-4 py-3 text-left">Email</th>
+              <th class="px-4 py-3 text-left">Role</th>
+              <th class="px-4 py-3 text-left">Last Login</th>
+              <th class="px-4 py-3 text-left">Created</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody id="telemetryTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
-          </tbody>
+          <tbody id="usersTableBody"></tbody>
         </table>
       </div>
     </div>
+
+    <!-- Activity Logs Tab -->
+    <div id="panel-logs" class="tab-panel hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">Activity Logs</h2>
+        <button onclick="refreshLogs()" class="btn-secondary text-xs">Refresh</button>
+      </div>
+      <div class="pie-card overflow-hidden">
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="border-b border-[#1c2333] text-slate-400">
+              <th class="px-4 py-3 text-left">Time</th>
+              <th class="px-4 py-3 text-left">User</th>
+              <th class="px-4 py-3 text-left">Action</th>
+              <th class="px-4 py-3 text-left">Details</th>
+              <th class="px-4 py-3 text-left">IP</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- User Data Tab -->
+    <div id="panel-userdata" class="tab-panel hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-white">User Data Viewer</h2>
+        <button onclick="refreshUserData()" class="btn-secondary text-xs">Refresh</button>
+      </div>
+      <div id="userDataList" class="space-y-3"></div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="createUserModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+      <div class="pie-card p-6 max-w-md w-full space-y-4 border border-[#1c2333]">
+        <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+          <h3 class="text-base font-bold text-white">Create User</h3>
+          <button onclick="closeModal('createUserModal')" class="text-slate-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Username</label>
+            <input id="newUsername" type="text" class="pie-input w-full font-mono" placeholder="username">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Email</label>
+            <input id="newEmail" type="email" class="pie-input w-full font-mono" placeholder="user@example.com">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Password</label>
+            <input id="newPassword" type="password" class="pie-input w-full font-mono" placeholder="password">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Role</label>
+            <select id="newRole" class="pie-input w-full font-mono">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-3 pt-2">
+          <button onclick="closeModal('createUserModal')" class="btn-secondary text-xs">Cancel</button>
+          <button onclick="createUser()" class="btn-primary text-xs">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Detail Modal -->
+    <div id="userDetailModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+      <div class="pie-card p-6 max-w-2xl w-full space-y-4 border border-[#1c2333] max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+          <h3 class="text-base font-bold text-white" id="detailModalTitle">User Details</h3>
+          <button onclick="closeModal('userDetailModal')" class="text-slate-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div id="userDetailContent" class="space-y-4 text-xs"></div>
+      </div>
+    </div>
+
   </main>
 
+  <style>
+    .tab-btn {
+      flex: 1;
+      padding: 0.5rem 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #94a3b8;
+      transition: all 0.15s;
+    }
+    .tab-btn:hover { color: #e2e8f0; }
+    .tab-btn.active {
+      background: #1c2333;
+      color: #2cf5d6;
+    }
+  </style>
+
   <script>
-    let currentDbMode = 'sqlite';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      const user = getCurrentUser();
-      if (!user || (!user.isOwner && user.id !== OWNER_DISCORD_ID)) {
-        window.location.href = 'dashboard.html';
-        return;
-      }
-
-      renderGlobalHeader('admin');
-      loadPlatformFlagsToUI();
-      renderAdminTelemetry();
-    });
-
-    function selectDbMode(mode) {
-      currentDbMode = mode;
-      document.getElementById('radioJson').checked = (mode === 'local_json');
-      document.getElementById('radioSqlite').checked = (mode === 'sqlite');
-      document.getElementById('radioTurso').checked = (mode === 'turso');
-
-      ['Json', 'Sqlite', 'Turso'].forEach(t => {
-        const el = document.getElementById('cardMode' + t);
-        el.className = 'pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2';
-      });
-
-      const activeCard = document.getElementById(mode === 'local_json' ? 'cardModeJson' : (mode === 'sqlite' ? 'cardModeSqlite' : 'cardModeTurso'));
-      activeCard.className = 'pie-card-inner p-4 cursor-pointer border border-[#2cf5d6]/50 bg-[#2cf5d6]/10 transition-all space-y-2';
-
-      document.getElementById('jsonFields').classList.toggle('hidden', mode !== 'local_json');
-      document.getElementById('sqliteFields').classList.toggle('hidden', mode !== 'sqlite');
-      document.getElementById('tursoFields').classList.toggle('hidden', mode !== 'turso');
-
-      document.getElementById('activeDbBadge').innerText = mode.toUpperCase() + ' SELECTED';
+    const user = getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      window.location.href = 'login.html';
     }
 
-    
-    function loadPlatformFlagsToUI() {
-      const flags = getPlatformFlags();
-      selectDbMode(flags.databaseMode || 'sqlite');
+    document.getElementById('adminName').textContent = user ? user.username : '';
 
-      document.getElementById('flagAllowVersion').checked = flags.allowUserChangeVersion;
-      toggleVersionSelectorVisibility(flags.allowUserChangeVersion);
-
-      document.getElementById('selectLockedVersion').value = flags.lockedVersion || '1.21.1';
-      document.getElementById('flagAllowReconnect').checked = flags.allowAutoReconnect;
-      document.getElementById('flagAllowRegistrations').checked = flags.allowNewRegistrations;
-
-      // Session & Token lifetime values
-      document.getElementById('chkUserAutoLogout').checked = (flags.userAutoLogoutEnabled !== false);
-      document.getElementById('inputUserSessionHours').value = flags.userSessionDurationHours || 24;
-      document.getElementById('chkUserTokenClean').checked = (flags.userTokenCleanEnabled !== false);
-      document.getElementById('inputUserTokenAge').value = flags.userTokenAgeHours || 24;
-
-      document.getElementById('chkAdminAutoLogout').checked = (flags.adminAutoLogoutEnabled === true);
-      document.getElementById('inputAdminSessionHours').value = flags.adminSessionDurationHours || 720;
-      document.getElementById('chkAdminTokenClean').checked = (flags.adminTokenCleanEnabled !== false);
-      document.getElementById('inputAdminTokenAge').value = flags.adminTokenAgeHours || 24;
-
-      if (flags.tursoUrl) document.getElementById('inputTursoUrl').value = flags.tursoUrl;
-      if (flags.tursoToken) document.getElementById('inputTursoToken').value = flags.tursoToken;
-      if (flags.sqlitePath) document.getElementById('inputSqlitePath').value = flags.sqlitePath;
-      if (flags.jsonStorePath) document.getElementById('inputJsonPath').value = flags.jsonStorePath;
+    function logout() {
+      localStorage.removeItem('PIE_MC_USER');
+      window.location.href = 'login.html';
     }
 
-    function saveSessionLifetimes() {
-      const flags = getPlatformFlags();
-      flags.userAutoLogoutEnabled = document.getElementById('chkUserAutoLogout').checked;
-      flags.userSessionDurationHours = parseInt(document.getElementById('inputUserSessionHours').value) || 24;
-      flags.userTokenCleanEnabled = document.getElementById('chkUserTokenClean').checked;
-      flags.userTokenAgeHours = parseInt(document.getElementById('inputUserTokenAge').value) || 24;
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + tab).classList.remove('hidden');
+      document.getElementById('tab-' + tab).classList.add('active');
 
-      flags.adminAutoLogoutEnabled = document.getElementById('chkAdminAutoLogout').checked;
-      flags.adminSessionDurationHours = parseInt(document.getElementById('inputAdminSessionHours').value) || 720;
-      flags.adminTokenCleanEnabled = document.getElementById('chkAdminTokenClean').checked;
-      flags.adminTokenAgeHours = parseInt(document.getElementById('inputAdminTokenAge').value) || 24;
-
-      savePlatformFlags(flags);
-      alert('Session and token lifetime policies saved successfully!');
+      if (tab === 'dashboard') loadMetrics();
+      if (tab === 'users') loadUsers();
+      if (tab === 'logs') refreshLogs();
+      if (tab === 'userdata') refreshUserData();
     }
 
-function toggleVersionSelectorVisibility(allow) {
-      document.getElementById('lockedVersionBox').classList.toggle('hidden', allow);
-    }
-
-    function applyDatabaseConfig() {
-      const flags = getPlatformFlags();
-      flags.databaseMode = currentDbMode;
-      flags.tursoUrl = document.getElementById('inputTursoUrl').value.trim();
-      flags.tursoToken = document.getElementById('inputTursoToken').value.trim();
-      flags.sqlitePath = document.getElementById('inputSqlitePath').value.trim();
-      flags.jsonStorePath = document.getElementById('inputJsonPath').value.trim();
-
-      savePlatformFlags(flags);
-      document.getElementById('activeDbBadge').innerText = currentDbMode.toUpperCase() + ' ACTIVE';
-      alert(`Database set to ${currentDbMode.toUpperCase()}!`);
-    }
-
-    function saveOwnerFlags() {
-      const flags = getPlatformFlags();
-      flags.allowUserChangeVersion = document.getElementById('flagAllowVersion').checked;
-      flags.lockedVersion = document.getElementById('selectLockedVersion').value;
-      flags.allowAutoReconnect = document.getElementById('flagAllowReconnect').checked;
-      flags.allowNewRegistrations = document.getElementById('flagAllowRegistrations').checked;
-
-      savePlatformFlags(flags);
-      alert('Platform settings saved!');
-    }
-
-    function renderAdminTelemetry() {
-      const tele = (window.getDynamicTelemetry) ? window.getDynamicTelemetry() : { totalUsersCount: 1, totalAccountsCount: 0, activeBotsCount: 0, totalServersCount: 0, usersList: [] };
-      document.getElementById('teleTotalUsers').innerText = tele.totalUsersCount;
-      document.getElementById('teleTotalAccounts').innerText = tele.totalAccountsCount;
-      document.getElementById('teleActiveBots').innerText = tele.activeBotsCount;
-      document.getElementById('teleTotalServers').innerText = tele.totalServersCount;
-
-      const tbody = document.getElementById('telemetryTableBody');
-      if (!tele.usersList || tele.usersList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 font-mono">No registered users in directory.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = tele.usersList.map(u => `
-        <tr class="hover:bg-slate-900/40 transition-colors">
-          <td class="px-4 py-3 font-bold text-white flex items-center space-x-2">
-            <span class="w-2 h-2 rounded-full ${u.isOwner ? 'bg-[#2cf5d6]' : 'bg-emerald-400'} pulse-dot"></span>
-            <span>${u.username}</span>
-            ${u.isOwner ? '<span class="badge-diamond text-[9px] px-1.5 py-0.5 ml-1">OWNER</span>' : ''}
-          </td>
-          <td class="px-4 py-3 text-slate-400 font-mono">${u.id}</td>
-          <td class="px-4 py-3 text-slate-500">${u.joined}</td>
-          <td class="px-4 py-3"><span class="badge-online font-bold">${u.accountsCount} Linked</span></td>
-          <td class="px-4 py-3"><span class="badge-diamond font-bold">${u.instancesCount} Active</span></td>
-          <td class="px-4 py-3 text-right">
-            <button onclick="terminateUserInstances('${u.id}', '${u.username}')" class="text-xs text-red-400 hover:text-red-300">Restart Session</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-function terminateUserInstances(uid, uname) {
-      window.showConfirmModal({
-        title: `Restart Session for ${uname}?`,
-        message: `This will safely trigger a reconnect for all active bot instances owned by Discord User <strong>${uname}</strong> (${uid}).`,
-        confirmText: 'Restart Bots',
-        cancelText: 'Cancel',
-        isDanger: false,
-        onConfirm: () => {
-          alert(`Restart signal sent for ${uname}.`);
+    // ─── Dashboard ─────────────────────────────
+    async function loadMetrics() {
+      try {
+        const res = await fetch('/api/admin/metrics', { headers: authHeaders() });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('metricUsers').textContent = data.metrics.totalUsers;
+          document.getElementById('metricAccounts').textContent = data.metrics.totalAccounts;
+          document.getElementById('metricServers').textContent = data.metrics.totalServers;
+          document.getElementById('metricProxies').textContent = data.metrics.totalProxies;
         }
-      });
+      } catch (e) { console.error(e); }
     }
+
+    // ─── Users ─────────────────────────────────
+    async function loadUsers() {
+      try {
+        const res = await fetch('/api/admin/users', { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) return;
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = data.users.map(u => `
+          <tr class="border-b border-[#1c2333]/50 hover:bg-slate-900/30">
+            <td class="px-4 py-3 font-bold text-white">${u.username}</td>
+            <td class="px-4 py-3 text-slate-300 font-mono">${u.email}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}">${u.role}</span>
+            </td>
+            <td class="px-4 py-3 text-slate-400 font-mono">${u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}</td>
+            <td class="px-4 py-3 text-slate-400 font-mono">${new Date(u.created_at).toLocaleDateString()}</td>
+            <td class="px-4 py-3 text-right space-x-2">
+              <button onclick="viewUserDetail('${u.id}')" class="text-cyan-400 hover:text-cyan-300">View</button>
+              <button onclick="resetPassword('${u.id}', '${u.username}')" class="text-amber-400 hover:text-amber-300">Reset Pass</button>
+              ${u.role !== 'admin' ? `<button onclick="deleteUser('${u.id}', '${u.username}')" class="text-red-400 hover:text-red-300">Delete</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    function openCreateUserModal() {
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newEmail').value = '';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('newRole').value = 'user';
+      openModal('createUserModal');
+    }
+
+    async function createUser() {
+      const username = document.getElementById('newUsername').value.trim();
+      const email = document.getElementById('newEmail').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const role = document.getElementById('newRole').value;
+
+      if (!username || !email || !password) { alert('All fields required'); return; }
+
+      try {
+        const res = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ username, email, password, role })
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeModal('createUserModal');
+          loadUsers();
+        } else {
+          alert(data.error || 'Failed to create user');
+        }
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function resetPassword(userId, username) {
+      const newPass = prompt(`Enter new password for ${username}:`);
+      if (!newPass) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ newPassword: newPass })
+        });
+        const data = await res.json();
+        alert(data.success ? 'Password reset!' : data.error);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function deleteUser(userId, username) {
+      if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          headers: authHeaders()
+        });
+        const data = await res.json();
+        if (data.success) loadUsers();
+        else alert(data.error);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    // ─── User Detail ───────────────────────────
+    async function viewUserDetail(userId) {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/data`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) return alert(data.error);
+
+        const u = data.data;
+        document.getElementById('detailModalTitle').textContent = `${u.username} (${u.role})`;
+        document.getElementById('userDetailContent').innerHTML = `
+          <div class="grid grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
+              <p class="text-slate-400 mb-1">Email</p>
+              <p class="text-white font-mono">${u.email}</p>
+            </div>
+            <div class="p-3 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
+              <p class="text-slate-400 mb-1">Last Login</p>
+              <p class="text-white font-mono">${u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}</p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-bold text-white mb-2">Linked Accounts (${u.accounts.length})</h4>
+            ${u.accounts.length === 0 ? '<p class="text-slate-500 text-xs">No accounts linked</p>' :
+              u.accounts.map(a => `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-[#0a0d14] border border-[#1c2333] mb-1">
+                  <div>
+                    <span class="text-white font-bold">${a.username}</span>
+                    <span class="text-slate-500 ml-2 font-mono">${a.uuid || 'no uuid'}</span>
+                  </div>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full ${a.status === 'authenticated' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${a.status}</span>
+                </div>
+              `).join('')}
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-bold text-white mb-2">Servers (${u.servers.length})</h4>
+            ${u.servers.length === 0 ? '<p class="text-slate-500 text-xs">No servers configured</p>' :
+              u.servers.map(s => `
+                <div class="p-2 rounded-lg bg-[#0a0d14] border border-[#1c2333] mb-1">
+                  <span class="text-white font-bold">${s.name}</span>
+                  <span class="text-slate-400 ml-2 font-mono">${s.host}:${s.port} (${s.version})</span>
+                </div>
+              `).join('')}
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-bold text-white mb-2">Proxies (${u.proxies.length})</h4>
+            ${u.proxies.length === 0 ? '<p class="text-slate-500 text-xs">No proxies configured</p>' :
+              u.proxies.map(p => `
+                <div class="p-2 rounded-lg bg-[#0a0d14] border border-[#1c2333] mb-1">
+                  <span class="text-white font-bold">${p.name}</span>
+                  <span class="text-slate-400 ml-2 font-mono">[${p.type}] ${p.host}:${p.port}</span>
+                </div>
+              `).join('')}
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-bold text-white mb-2">Triggers (${u.triggers.length})</h4>
+            ${u.triggers.length === 0 ? '<p class="text-slate-500 text-xs">No triggers set</p>' :
+              u.triggers.map(t => `
+                <div class="p-2 rounded-lg bg-[#0a0d14] border border-[#1c2333] mb-1">
+                  <span class="text-white font-bold">${t.name}</span>
+                  <span class="text-slate-400 ml-2 font-mono">"${t.keyword}" → "${t.reply}"</span>
+                  <span class="ml-2 text-[10px] ${t.enabled ? 'text-green-400' : 'text-red-400'}">${t.enabled ? 'ON' : 'OFF'}</span>
+                </div>
+              `).join('')}
+          </div>
+
+          <div class="mt-4">
+            <h4 class="text-sm font-bold text-white mb-2">Automations (${u.automations.length})</h4>
+            ${u.automations.length === 0 ? '<p class="text-slate-500 text-xs">No automations set</p>' :
+              u.automations.map(a => `
+                <div class="p-2 rounded-lg bg-[#0a0d14] border border-[#1c2333] mb-1">
+                  <span class="text-white font-mono">"${a.message}"</span>
+                  <span class="text-slate-400 ml-2">every ${a.interval_seconds}s</span>
+                  <span class="ml-2 text-[10px] ${a.enabled ? 'text-green-400' : 'text-red-400'}">${a.enabled ? 'ON' : 'OFF'}</span>
+                </div>
+              `).join('')}
+          </div>
+        `;
+        openModal('userDetailModal');
+      } catch (e) { console.error(e); }
+    }
+
+    // ─── Logs ──────────────────────────────────
+    async function refreshLogs() {
+      try {
+        const res = await fetch('/api/admin/logs?limit=200', { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) return;
+        const tbody = document.getElementById('logsTableBody');
+        tbody.innerHTML = data.logs.map(l => `
+          <tr class="border-b border-[#1c2333]/50 hover:bg-slate-900/30">
+            <td class="px-4 py-3 text-slate-400 font-mono whitespace-nowrap">${new Date(l.created_at).toLocaleString()}</td>
+            <td class="px-4 py-3 text-white font-bold">${l.username}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${getActionColor(l.action)}">${l.action}</span>
+            </td>
+            <td class="px-4 py-3 text-slate-300 font-mono max-w-xs truncate">${l.details}</td>
+            <td class="px-4 py-3 text-slate-500 font-mono">${l.ip_address || '-'}</td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    function getActionColor(action) {
+      if (action === 'login') return 'bg-green-500/20 text-green-400';
+      if (action === 'password_changed') return 'bg-amber-500/20 text-amber-400';
+      if (action.includes('delete')) return 'bg-red-500/20 text-red-400';
+      if (action.includes('create')) return 'bg-cyan-500/20 text-cyan-400';
+      if (action.includes('bot')) return 'bg-purple-500/20 text-purple-400';
+      if (action.includes('token') || action.includes('ssid')) return 'bg-indigo-500/20 text-indigo-400';
+      return 'bg-slate-500/20 text-slate-400';
+    }
+
+    // ─── User Data ─────────────────────────────
+    async function refreshUserData() {
+      try {
+        const res = await fetch('/api/admin/users-all', { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) return;
+        const container = document.getElementById('userDataList');
+        container.innerHTML = data.users.map(u => `
+          <div class="pie-card p-4 cursor-pointer hover:border-[#2cf5d6]/30 transition-colors" onclick="viewUserDetail('${u.id}')">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-[#1c2333] flex items-center justify-center">
+                  <span class="text-lg font-black ${u.role === 'admin' ? 'text-amber-400' : 'text-[#2cf5d6]'}">${u.username.charAt(0).toUpperCase()}</span>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-white">${u.username}</p>
+                  <p class="text-[10px] text-slate-400 font-mono">${u.email}</p>
+                </div>
+              </div>
+              <div class="flex items-center space-x-4 text-[10px] font-mono">
+                <div class="text-center">
+                  <p class="text-[#2cf5d6] font-bold">${u.accounts.length}</p>
+                  <p class="text-slate-500">Accounts</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-[#2cf5d6] font-bold">${u.servers.length}</p>
+                  <p class="text-slate-500">Servers</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-[#2cf5d6] font-bold">${u.proxies.length}</p>
+                  <p class="text-slate-500">Proxies</p>
+                </div>
+                <div class="text-center">
+                  <p class="text-[#2cf5d6] font-bold">${u.triggers.length}</p>
+                  <p class="text-slate-500">Triggers</p>
+                </div>
+                <span class="px-2 py-0.5 rounded-full font-bold ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-400' : 'bg-cyan-500/20 text-cyan-400'}">${u.role}</span>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
+
+    // Init
+    loadMetrics();
   </script>
 </body>
 </html>

@@ -8,6 +8,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -18,7 +19,14 @@
     "socks-proxy-agent": "^8.0.5",
     "ws": "^8.18.0"
   },
-  "keywords": ["minecraft", "bot", "mineflayer", "proxy", "automation", "triggers"],
+  "keywords": [
+    "minecraft",
+    "bot",
+    "mineflayer",
+    "proxy",
+    "automation",
+    "triggers"
+  ],
   "author": "Pie MC Team",
   "license": "MIT"
 }
