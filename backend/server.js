@@ -404,7 +404,9 @@ app.delete('/api/proxies/:id', requireAuth, (req, res) => {
 
 // ─── WEBSOCKET REAL-TIME GATEWAY ───────────────────────────
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+  console.log(`[WS] Client connected from ${clientIp}`);
   ws.send(JSON.stringify({ type: 'welcome', message: 'Connected to Pie MC Realtime Gateway' }));
 
   ws.on('message', (data) => {
@@ -438,6 +440,10 @@ wss.on('connection', (ws) => {
       }
     } catch (e) {}
   });
+});
+
+wss.on('error', (err) => {
+  console.error('[WS] Server error:', err.message);
 });
 
 // ─── START SERVER ──────────────────────────────────────────

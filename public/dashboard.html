@@ -314,7 +314,11 @@
         };
 
         if (newStatus === 'online') {
-          sendBotMessage({ type: 'start_bot', userId, instanceId: inst.id, config: botConfig });
+          // Ensure WebSocket is connected before sending
+          connectBotWs();
+          setTimeout(() => {
+            sendBotMessage({ type: 'start_bot', userId, instanceId: inst.id, config: botConfig });
+          }, 500);
         } else {
           sendBotMessage({ type: 'stop_bot', userId, instanceId: inst.id });
         }

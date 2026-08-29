@@ -722,10 +722,12 @@ function connectBotWs() {
   if (_botWs && (_botWs.readyState === WebSocket.OPEN || _botWs.readyState === WebSocket.CONNECTING)) {
     return;
   }
+  const url = getWsUrl();
+  console.log('[PieMC] Connecting WebSocket to:', url);
   try {
-    _botWs = new WebSocket(getWsUrl());
+    _botWs = new WebSocket(url);
     _botWs.onopen = () => {
-      console.log('[PieMC] WebSocket connected');
+      console.log('[PieMC] WebSocket connected to', url);
     };
     _botWs.onmessage = (e) => {
       try {
@@ -733,12 +735,17 @@ function connectBotWs() {
         _botWsListeners.forEach(fn => fn(data));
       } catch (err) {}
     };
-    _botWs.onclose = () => {
-      console.log('[PieMC] WebSocket disconnected, reconnecting in 3s...');
+    _botWs.onclose = (e) => {
+      console.log('[PieMC] WebSocket closed (code=' + e.code + '), reconnecting in 3s...');
+      _botWs = null;
       _botWsReconnectTimer = setTimeout(connectBotWs, 3000);
     };
-    _botWs.onerror = () => {};
+    _botWs.onerror = (e) => {
+      console.error('[PieMC] WebSocket error:', e.message || 'connection failed');
+      _botWs = null;
+    };
   } catch (e) {
+    console.error('[PieMC] WebSocket creation failed:', e.message);
     _botWsReconnectTimer = setTimeout(connectBotWs, 3000);
   }
 }
@@ -747,8 +754,16 @@ function sendBotMessage(payload) {
   if (_botWs && _botWs.readyState === WebSocket.OPEN) {
     _botWs.send(JSON.stringify(payload));
   } else {
-    console.warn('[PieMC] WebSocket not connected, queuing reconnect...');
+    console.warn('[PieMC] WebSocket not connected, reconnecting...');
     connectBotWs();
+    // Retry sending after a short delay
+    setTimeout(() => {
+      if (_botWs && _botWs.readyState === WebSocket.OPEN) {
+        _botWs.send(JSON.stringify(payload));
+      } else {
+        console.error('[PieMC] Still not connected. Message not sent:', payload.type);
+      }
+    }, 1500);
   }
 }
 
