@@ -44,7 +44,7 @@ class BotInstance extends EventEmitter {
           time: new Date().toTimeString().split(' ')[0],
           player: 'SYSTEM',
           tag: '[SYSTEM]',
-          msg: `Connected to ${this.config.server ? this.config.server.host : '127.0.0.1'}:${this.config.server ? this.config.server.port : 25565}`,
+          msg: `Connected to ${this.config.server ? this.config.server.host : '127.0.0.1'}:${this.config.server ? this.config.server.port : 25565} (simulation mode)`,
           type: 'system'
         });
       }, 800);
@@ -53,8 +53,6 @@ class BotInstance extends EventEmitter {
 
     try {
       const hasToken = !!(this.config.account && this.config.account.rawToken);
-
-      // Mineflayer/minecraft-protocol expects UUID WITHOUT dashes in selectedProfile.id
       const rawUuid = this.config.account && this.config.account.uuid ? this.config.account.uuid.replace(/-/g, '') : '';
 
       const botOptions = {
@@ -62,23 +60,27 @@ class BotInstance extends EventEmitter {
         port: (this.config.server && this.config.server.port) || 25565,
         username: (this.config.account && this.config.account.username) || 'PieBot',
         version: (this.config.server && this.config.server.version) || '1.21.1',
-        auth: hasToken ? 'microsoft' : 'microsoft',
-        // haveCredentials tells minecraft-protocol to call sessionserver.mojang.com
-        // to validate the token. Without this, online-mode servers reject the bot.
-        haveCredentials: hasToken,
-        accessToken: hasToken ? this.config.account.rawToken : undefined,
-        session: hasToken ? {
-          accessToken: this.config.account.rawToken,
-          selectedProfile: {
-            id: rawUuid,
-            name: this.config.account.username
-          },
-          availableProfile: [{
-            id: rawUuid,
-            name: this.config.account.username
-          }]
-        } : undefined
       };
+
+      if (hasToken) {
+        // Custom auth function: bypasses Microsoft OAuth, sets session directly
+        // so encrypt.js can validate the token with sessionserver.mojang.com
+        botOptions.auth = (client, opts) => {
+          client.session = opts.session;
+          client.username = opts.username;
+          client.uuid = opts.session.selectedProfile.id;
+          opts.connect(client);
+        };
+        botOptions.haveCredentials = true;
+        botOptions.accessToken = this.config.account.rawToken;
+        botOptions.session = {
+          accessToken: this.config.account.rawToken,
+          selectedProfile: { id: rawUuid, name: this.config.account.username },
+          availableProfile: [{ id: rawUuid, name: this.config.account.username }]
+        };
+      } else {
+        botOptions.auth = 'microsoft';
+      }
 
       console.log(`[BotManager] Starting bot "${botOptions.username}" -> ${botOptions.host}:${botOptions.port} (auth: ${hasToken ? 'token' : 'microsoft'}, uuid: ${rawUuid})`);
 
@@ -97,17 +99,23 @@ class BotInstance extends EventEmitter {
       // Timeout: if bot doesn't spawn in 30s, mark as failed
       const spawnTimeout = setTimeout(() => {
         if (this.status === 'connecting') {
-          console.error(`[BotManager] Bot "${this.name}" timed out - never spawned (30s). Check server address, version, and token.`);
+          console.error(`[BotManager] Bot "${this.name}" timed out (30s) - never spawned`);
           this.status = 'offline';
           this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
-          this.emit('log', { instance: this.name, event: 'Timeout', details: 'Bot did not spawn within 30 seconds. Check server, version, and token.' });
+          this.emit('chat', {
+            time: new Date().toTimeString().split(' ')[0],
+            player: 'SYSTEM',
+            tag: '[ERROR]',
+            msg: 'Connection timed out. Check server address, version, and token.',
+            type: 'system'
+          });
           try { this.bot.quit(); } catch(e) {}
           this.bot = null;
         }
       }, 30000);
 
       this.bot.on('login', () => {
-        console.log(`[BotManager] Bot "${this.name}" logged in successfully, waiting for spawn...`);
+        console.log(`[BotManager] Bot "${this.name}" logged in, waiting for spawn...`);
       });
 
       this.bot.on('spawn', () => {
@@ -135,29 +143,55 @@ class BotInstance extends EventEmitter {
 
       this.bot.on('kicked', (reason) => {
         clearTimeout(spawnTimeout);
-        console.warn(`[BotManager] Bot "${this.name}" kicked:`, JSON.stringify(reason));
-        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[KICKED]', msg: `Kicked: ${typeof reason === 'string' ? reason : JSON.stringify(reason)}`, type: 'system' });
-        this.emit('log', { instance: this.name, event: 'Kicked', details: JSON.stringify(reason) });
+        const reasonStr = typeof reason === 'string' ? reason : JSON.stringify(reason);
+        console.warn(`[BotManager] Bot "${this.name}" kicked: ${reasonStr}`);
+        this.emit('chat', {
+          time: new Date().toTimeString().split(' ')[0],
+          player: 'SYSTEM',
+          tag: '[KICKED]',
+          msg: `Kicked: ${reasonStr}`,
+          type: 'system'
+        });
+        this.emit('log', { instance: this.name, event: 'Kicked', details: reasonStr });
         this.status = 'offline';
         this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
       });
 
       this.bot.on('error', (err) => {
         console.error(`[BotManager] Bot "${this.name}" error:`, err.message);
-        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[ERROR]', msg: err.message, type: 'system' });
+        this.emit('chat', {
+          time: new Date().toTimeString().split(' ')[0],
+          player: 'SYSTEM',
+          tag: '[ERROR]',
+          msg: err.message,
+          type: 'system'
+        });
         this.emit('log', { instance: this.name, event: 'Error', details: err.message });
       });
 
       this.bot.on('end', (reason) => {
         clearTimeout(spawnTimeout);
         console.log(`[BotManager] Bot "${this.name}" disconnected: ${reason}`);
-        this.emit('chat', { time: new Date().toTimeString().split(' ')[0], player: 'SYSTEM', tag: '[DISCONNECT]', msg: `Disconnected: ${reason}`, type: 'system' });
+        this.emit('chat', {
+          time: new Date().toTimeString().split(' ')[0],
+          player: 'SYSTEM',
+          tag: '[DISCONNECT]',
+          msg: `Disconnected: ${reason}`,
+          type: 'system'
+        });
         this.handleDisconnect();
       });
 
     } catch (err) {
       this.status = 'offline';
       this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
+      this.emit('chat', {
+        time: new Date().toTimeString().split(' ')[0],
+        player: 'SYSTEM',
+        tag: '[ERROR]',
+        msg: `Connection failed: ${err.message}`,
+        type: 'system'
+      });
       this.emit('log', { instance: this.name, event: 'Connection Failed', details: err.message });
     }
   }
@@ -291,7 +325,7 @@ class BotManager {
       const instance = new BotInstance(userId || 'default', id, config, this.globalSettings);
       this.instances.set(key, instance);
     } else {
-      // Update config when instance already exists (e.g. user changed account/server)
+      // Update config when instance already exists
       const existing = this.instances.get(key);
       if (config && Object.keys(config).length > 0) {
         existing.config = { ...existing.config, ...config };
