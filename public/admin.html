@@ -10,27 +10,7 @@
 </head>
 <body class="bg-[#090b10] min-h-screen text-white">
 
-  <!-- Header -->
-  <header class="border-b border-[#1c2333] bg-[#0a0d14]/80 backdrop-blur-xl sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 via-[#2cf5d6] to-emerald-400 p-0.5">
-          <div class="w-full h-full bg-[#090b10] rounded-[10px] flex items-center justify-center">
-            <span class="text-lg font-black bg-gradient-to-r from-[#2cf5d6] to-emerald-400 bg-clip-text text-transparent">π</span>
-          </div>
-        </div>
-        <div>
-          <h1 class="text-sm font-black text-white tracking-wider">ADMIN PANEL</h1>
-          <p class="text-[10px] text-slate-500 font-mono">Pie MC Management</p>
-        </div>
-      </div>
-      <div class="flex items-center space-x-3">
-        <span id="adminName" class="text-xs text-slate-400 font-mono"></span>
-        <a href="settings.html" class="text-xs text-slate-400 hover:text-[#2cf5d6] font-mono">Settings</a>
-        <button onclick="logout()" class="text-xs text-red-400 hover:text-red-300 font-mono">Logout</button>
-      </div>
-    </div>
-  </header>
+  <div id="header-mount"></div>
 
   <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
@@ -189,12 +169,9 @@
       window.location.href = 'login.html';
     }
 
-    document.getElementById('adminName').textContent = user ? user.username : '';
+    renderGlobalHeader('admin');
 
-    function logout() {
-      localStorage.removeItem('PIE_MC_USER');
-      window.location.href = 'login.html';
-    }
+
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));

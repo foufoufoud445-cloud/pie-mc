@@ -140,50 +140,6 @@ window.getDynamicTelemetry = function() {
   return { totalUsers: 1, totalAccounts: 0, activeBots: 0 };
 };
 
-  let totalAccounts = 0;
-  let activeBots = 0;
-  let totalServers = 0;
-
-  const usersWithStats = list.map(u => {
-    let accCount = 0;
-    let instCount = 1;
-    let srvCount = 0;
-
-    try {
-      const raw = localStorage.getItem(`PIE_MC_DATA_${u.id}_V2`) || localStorage.getItem(`PIE_MC_DATA_${u.id}`);
-      if (raw) {
-        const d = JSON.parse(raw);
-        accCount = Array.isArray(d.accounts) ? d.accounts.length : 0;
-        instCount = Array.isArray(d.instances) ? d.instances.length : 1;
-        srvCount = Array.isArray(d.servers) ? d.servers.length : 0;
-        if (Array.isArray(d.instances)) {
-          activeBots += d.instances.filter(i => i.status === 'online').length;
-        }
-      }
-    } catch (e) {}
-
-    totalAccounts += accCount;
-    totalServers += srvCount;
-
-    return {
-      id: u.id,
-      username: u.username,
-      joined: u.joined || '2026-08-29',
-      accountsCount: accCount,
-      instancesCount: instCount,
-      isOwner: u.role === 'admin'
-    };
-  });
-
-  return {
-    totalUsersCount: usersWithStats.length,
-    totalAccountsCount: totalAccounts,
-    activeBotsCount: activeBots,
-    totalServersCount: totalServers,
-    usersList: usersWithStats
-  };
-};
-
 function logout() {
   setCurrentUser(null);
   window.location.href = 'login.html';
