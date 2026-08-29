@@ -464,9 +464,21 @@ app.get('/api/debug', (req, res) => {
     if (cmd === 'status') {
       const instances = [];
       botManager.instances.forEach((inst, key) => {
-        instances.push({ key, name: inst.name, status: inst.status, userId: inst.userId, hasBot: !!inst.bot });
+        instances.push({
+          key, name: inst.name, status: inst.status, userId: inst.userId,
+          hasBot: !!inst.bot,
+          botUsername: inst.bot ? inst.bot.username : null,
+          reconnectAttempts: inst.reconnectAttempts,
+          config: inst.config ? {
+            host: inst.config.server ? inst.config.server.host : null,
+            port: inst.config.server ? inst.config.server.port : null,
+            version: inst.config.server ? inst.config.server.version : null,
+            accountUsername: inst.config.account ? inst.config.account.username : null,
+            hasToken: !!(inst.config.account && inst.config.account.rawToken)
+          } : null
+        });
       });
-      res.json({ success: true, command: 'status', instances, totalInstances: instances.length });
+      res.json({ success: true, command: 'status', instances, totalInstances: instances.length, nodeVersion: process.version, platform: process.platform });
     } else if (cmd === 'start') {
       const userId = req.query.userId || 'admin_001';
       const instanceId = parseInt(req.query.instanceId) || 1;
@@ -488,14 +500,26 @@ app.get('/api/debug', (req, res) => {
 
       console.log(`[DEBUG] Starting bot: user=${userId} instance=${instanceId} server=${serverHost}:${serverPort} account=${username} hasToken=${!!token}`);
       const inst = botManager.getOrCreateInstance(userId, instanceId, config);
+
+      // Capture bot events for debug
+      const debugLogs = [];
+      const onChat = (msg) => debugLogs.push(`[${msg.tag}] ${msg.msg}`);
+      inst.on('chat', onChat);
+
       inst.start();
 
-      // Wait 5 seconds then check status
+      // Wait 8 seconds then return status with captured logs
       setTimeout(() => {
-        console.log(`[DEBUG] Bot status after 5s: ${inst.status}`);
-      }, 5000);
+        inst.removeListener('chat', onChat);
+        console.log(`[DEBUG] Bot status after 8s: ${inst.status}`);
+      }, 8000);
 
-      res.json({ success: true, command: 'start', message: `Bot starting on ${serverHost}:${serverPort}...`, config: { serverHost, serverPort, version, username, hasToken: !!token } });
+      res.json({
+        success: true,
+        command: 'start',
+        message: `Bot starting on ${serverHost}:${serverPort}... Check /api/debug?cmd=status in 10 seconds`,
+        config: { serverHost, serverPort, version, username, hasToken: !!token, uuid: uuid ? uuid.replace(/-/g, '') : null }
+      });
     } else if (cmd === 'stop') {
       const userId = req.query.userId || 'admin_001';
       const instanceId = parseInt(req.query.instanceId) || 1;
@@ -525,8 +549,74 @@ app.get('/api/debug', (req, res) => {
           res.json({ success: false, error: 'Token rejected by Mojang', data });
         }
       }).catch(e => res.json({ success: false, error: e.message }));
+    } else if (cmd === 'test-connection') {
+      const token = req.query.token;
+      const host = req.query.host || 'as.catpvp.net';
+      const port = parseInt(req.query.port) || 25565;
+      const version = req.query.version || '1.21.1';
+      const username = req.query.username || 'TestBot';
+      const uuid = (req.query.uuid || '').replace(/-/g, '');
+
+      if (!token) return res.json({ success: false, error: 'Provide ?token=YOUR_TOKEN' });
+
+      let mineflayer;
+      try { mineflayer = require('mineflayer'); } catch(e) { return res.json({ success: false, error: 'mineflayer not available' }); }
+
+      const bot = mineflayer.createBot({
+        host, port, username, version,
+        auth: (client, opts) => {
+          client.session = opts.session;
+          client.username = opts.username;
+          client.uuid = opts.session.selectedProfile.id;
+          opts.connect(client);
+        },
+        haveCredentials: true,
+        accessToken: token,
+        session: {
+          accessToken: token,
+          selectedProfile: { id: uuid, name: username },
+          availableProfile: [{ id: uuid, name: username }]
+        }
+      });
+
+      const result = { host, port, version, username, hasToken: true, uuid };
+
+      const timeout = setTimeout(() => {
+        result.status = 'timeout';
+        result.message = 'Bot did not spawn within 15s';
+        try { bot.quit(); } catch(e) {}
+        res.json(result);
+      }, 15000);
+
+      bot.on('login', () => { result.login = true; console.log('[DEBUG] test-connection LOGIN'); });
+      bot.on('spawn', () => {
+        clearTimeout(timeout);
+        result.status = 'success';
+        result.message = `Bot joined as ${bot.username}! Players: ${Object.keys(bot.players).length}`;
+        result.playerCount = Object.keys(bot.players).length;
+        bot.quit();
+        res.json(result);
+      });
+      bot.on('kicked', (r) => {
+        clearTimeout(timeout);
+        result.status = 'kicked';
+        result.message = typeof r === 'string' ? r : JSON.stringify(r);
+        res.json(result);
+      });
+      bot.on('error', (e) => {
+        result.lastError = e.message;
+        console.error('[DEBUG] test-connection error:', e.message);
+      });
+      bot.on('end', (r) => {
+        if (!result.status) {
+          clearTimeout(timeout);
+          result.status = 'ended';
+          result.message = 'Disconnected: ' + r;
+          res.json(result);
+        }
+      });
     } else {
-      res.json({ success: false, error: 'Unknown command. Use: status, start, stop, logs, test-token' });
+      res.json({ success: false, error: 'Unknown command. Use: status, start, stop, logs, test-token, test-connection' });
     }
   } catch (e) {
     res.json({ success: false, error: e.message });
