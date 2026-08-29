@@ -92,6 +92,8 @@
 
       const now = new Date().toTimeString().split(' ')[0];
       const inst = state.instances.find(i => i.id === state.activeInstanceId) || state.instances[0];
+      const user = getCurrentUser();
+      const userId = user ? user.id : 'default';
 
       window.updatePieState(s => {
         s.chatLogs.push({ 
@@ -104,6 +106,9 @@
           type: 'bot' 
         });
       });
+
+      // Send to backend via WebSocket so the actual bot sends it in-game
+      sendBotMessage({ type: 'chat', userId, instanceId: inst.id, message: val });
 
       renderChat();
       input.value = '';

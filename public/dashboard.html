@@ -271,11 +271,13 @@
           return;
         }
 
-        inst.status = inst.status === 'online' ? 'offline' : 'online';
+        const wasOnline = inst.status === 'online';
+        const newStatus = wasOnline ? 'offline' : 'online';
+        inst.status = newStatus;
         window.updatePieState(s => {
           const target = s.instances.find(x => x.id === inst.id);
           if (target) {
-            target.status = inst.status;
+            target.status = newStatus;
             target.account = inst.account;
             target.server = inst.server;
           }
@@ -285,8 +287,8 @@
             instanceId: inst.id,
             time: new Date().toTimeString().split(' ')[0],
             player: inst.account,
-            tag: inst.status === 'online' ? '[JOIN]' : '[QUIT]',
-            msg: inst.status === 'online' ? `Connected to ${inst.server}` : 'Disconnected from server',
+            tag: newStatus === 'online' ? '[JOIN]' : '[QUIT]',
+            msg: newStatus === 'online' ? `Connecting to ${inst.server}...` : 'Disconnected from server',
             type: 'system'
           });
         });
@@ -294,6 +296,28 @@
         populateDashboard();
         renderChatLogs();
         window.renderInstanceBar();
+
+        // Build full config from local state and send to backend
+        const user = getCurrentUser();
+        const userId = user ? user.id : 'default';
+        const account = state.accounts.find(a => a.username === inst.account);
+        const server = state.servers.find(s => s.name === inst.server);
+        const proxyObj = state.proxies.find(p => p.name === inst.proxy);
+
+        const botConfig = {
+          server: server ? { host: server.host, port: server.port, version: server.version || '1.21.1' } : { host: '127.0.0.1', port: 25565, version: '1.21.1' },
+          account: account ? { username: account.username, uuid: account.uuid, rawToken: account.rawToken || account.token } : { username: 'PieBot' },
+          proxy: proxyObj ? { type: proxyObj.type, host: proxyObj.host, port: proxyObj.port, auth: proxyObj.auth } : null,
+          triggers: state.triggers || [],
+          automations: state.automations || [],
+          name: inst.name
+        };
+
+        if (newStatus === 'online') {
+          sendBotMessage({ type: 'start_bot', userId, instanceId: inst.id, config: botConfig });
+        } else {
+          sendBotMessage({ type: 'stop_bot', userId, instanceId: inst.id });
+        }
       }
     }
 

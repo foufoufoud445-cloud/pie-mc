@@ -761,6 +761,56 @@ window.closeModal = function(id) {
   }
 };
 
+// WebSocket Connection Manager
+// Connects to the backend for real-time bot control
+let _botWs = null;
+let _botWsReconnectTimer = null;
+let _botWsListeners = [];
+
+function getWsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}`;
+}
+
+function connectBotWs() {
+  if (_botWs && (_botWs.readyState === WebSocket.OPEN || _botWs.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+  try {
+    _botWs = new WebSocket(getWsUrl());
+    _botWs.onopen = () => {
+      console.log('[PieMC] WebSocket connected');
+    };
+    _botWs.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        _botWsListeners.forEach(fn => fn(data));
+      } catch (err) {}
+    };
+    _botWs.onclose = () => {
+      console.log('[PieMC] WebSocket disconnected, reconnecting in 3s...');
+      _botWsReconnectTimer = setTimeout(connectBotWs, 3000);
+    };
+    _botWs.onerror = () => {};
+  } catch (e) {
+    _botWsReconnectTimer = setTimeout(connectBotWs, 3000);
+  }
+}
+
+function sendBotMessage(payload) {
+  if (_botWs && _botWs.readyState === WebSocket.OPEN) {
+    _botWs.send(JSON.stringify(payload));
+  } else {
+    console.warn('[PieMC] WebSocket not connected, queuing reconnect...');
+    connectBotWs();
+  }
+}
+
+function onBotMessage(fn) {
+  _botWsListeners.push(fn);
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   initParticleCanvas();
+  connectBotWs();
 });
