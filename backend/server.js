@@ -446,6 +446,98 @@ wss.on('error', (err) => {
   console.error('[WS] Server error:', err.message);
 });
 
+// ─── DEBUG API (temporary - test bot connection from Render) ──
+app.get('/api/debug', (req, res) => {
+  const cmd = req.query.cmd || 'status';
+  const logs = [];
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+
+  // Capture console output
+  const capture = (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
+  console.log = capture;
+  console.warn = capture;
+  console.error = capture;
+
+  try {
+    if (cmd === 'status') {
+      const instances = [];
+      botManager.instances.forEach((inst, key) => {
+        instances.push({ key, name: inst.name, status: inst.status, userId: inst.userId, hasBot: !!inst.bot });
+      });
+      res.json({ success: true, command: 'status', instances, totalInstances: instances.length });
+    } else if (cmd === 'start') {
+      const userId = req.query.userId || 'admin_001';
+      const instanceId = parseInt(req.query.instanceId) || 1;
+      const serverHost = req.query.host || 'as.catpvp.net';
+      const serverPort = parseInt(req.query.port) || 25565;
+      const version = req.query.version || '1.21.1';
+      const token = req.query.token || '';
+      const username = req.query.username || 'Bot';
+      const uuid = req.query.uuid || '';
+
+      const config = {
+        name: 'Debug Instance ' + instanceId,
+        server: { host: serverHost, port: serverPort, version },
+        account: token ? { username, uuid: uuid.replace(/-/g, ''), rawToken: token } : { username },
+        proxy: null,
+        triggers: [],
+        automations: []
+      };
+
+      console.log(`[DEBUG] Starting bot: user=${userId} instance=${instanceId} server=${serverHost}:${serverPort} account=${username} hasToken=${!!token}`);
+      const inst = botManager.getOrCreateInstance(userId, instanceId, config);
+      inst.start();
+
+      // Wait 5 seconds then check status
+      setTimeout(() => {
+        console.log(`[DEBUG] Bot status after 5s: ${inst.status}`);
+      }, 5000);
+
+      res.json({ success: true, command: 'start', message: `Bot starting on ${serverHost}:${serverPort}...`, config: { serverHost, serverPort, version, username, hasToken: !!token } });
+    } else if (cmd === 'stop') {
+      const userId = req.query.userId || 'admin_001';
+      const instanceId = parseInt(req.query.instanceId) || 1;
+      const key = `${userId}:${instanceId}`;
+      const inst = botManager.instances.get(key);
+      if (inst) {
+        inst.stop();
+        res.json({ success: true, command: 'stop', message: 'Bot stopped' });
+      } else {
+        res.json({ success: false, command: 'stop', error: 'No bot instance found' });
+      }
+    } else if (cmd === 'logs') {
+      const limit = parseInt(req.query.limit) || 50;
+      const { getLoginLogs } = require('./src/auth');
+      const logs = getLoginLogs(limit);
+      res.json({ success: true, command: 'logs', data: logs });
+    } else if (cmd === 'test-token') {
+      const token = req.query.token;
+      if (!token) return res.json({ success: false, error: 'Provide ?token=YOUR_TOKEN' });
+      // Verify with Mojang
+      fetch('https://api.minecraftservices.com/minecraft/profile', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(r => r.json()).then(data => {
+        if (data.name) {
+          res.json({ success: true, username: data.name, uuid: data.id, valid: true });
+        } else {
+          res.json({ success: false, error: 'Token rejected by Mojang', data });
+        }
+      }).catch(e => res.json({ success: false, error: e.message }));
+    } else {
+      res.json({ success: false, error: 'Unknown command. Use: status, start, stop, logs, test-token' });
+    }
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  } finally {
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origError;
+    if (logs.length > 0) console.log('[DEBUG API logs]', logs.join('\n'));
+  }
+});
+
 // ─── START SERVER ──────────────────────────────────────────
 
 initDatabase().then(() => {
