@@ -792,10 +792,38 @@ window.playBotJoinSound = function() {
   } catch(e) {}
 };
 
-// Auto-play sound on bot join messages
+// Handle bot status updates from backend
 onBotMessage((data) => {
-  if (data.type === 'sound' && data.msg === 'BOT_JOINED') {
-    window.playBotJoinSound();
+  if (data.type === 'bot_status') {
+    console.log('[PieMC] Bot status update:', data.status, 'instance:', data.instanceId);
+    // Update local state
+    window.updatePieState(s => {
+      const inst = s.instances.find(i => i.id === data.instanceId);
+      if (inst) inst.status = data.status;
+    });
+    // Refresh UI if functions exist
+    if (typeof populateDashboard === 'function') populateDashboard();
+    if (typeof renderInstanceBar === 'function') window.renderInstanceBar();
+  }
+  if (data.type === 'bot_chat') {
+    console.log('[PieMC] Bot chat:', data.tag, data.msg);
+    window.updatePieState(s => {
+      s.chatLogs.push({
+        id: 'c_' + Date.now(),
+        instanceId: data.instanceId || s.activeInstanceId,
+        time: data.time,
+        player: data.player,
+        tag: data.tag,
+        msg: data.msg,
+        type: data.type
+      });
+    });
+    if (typeof renderChatLogs === 'function') renderChatLogs();
+    if (typeof renderChat === 'function') renderChat();
+    // Play sound on join
+    if (data.type === 'sound' && data.msg === 'BOT_JOINED') {
+      window.playBotJoinSound();
+    }
   }
 });
 

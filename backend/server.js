@@ -71,7 +71,6 @@ function sanitizeToken(token) {
 
 // ─── AUTH ROUTES ───────────────────────────────────────────
 
-// Login
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -79,20 +78,18 @@ app.post('/api/auth/login', (req, res) => {
   }
   const result = authenticateUser(email, password);
   if (result.success) {
-    logLoginAction(result.user.id, result.user.username, 'login', `Logged in via email`, req.ip);
+    logLoginAction(result.user.id, result.user.username, 'login', 'Logged in via email', req.ip);
     console.log(`[Auth] ${result.user.username} (${result.user.role}) logged in`);
   }
   res.json(result);
 });
 
-// Register - Admin only
 app.post('/api/auth/register', requireAuth, requireAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
   if (!username || !email || !password) {
     return res.status(400).json({ success: false, error: 'Username, email, and password are required' });
   }
   const finalRole = (role === 'admin' && req.user.role === 'admin') ? 'admin' : 'user';
-
   const result = createUser(username, email, password, finalRole);
   if (result.success) {
     logLoginAction(result.user.id, result.user.username, 'account_created', `Created by admin ${req.user.username}`, req.ip);
@@ -100,12 +97,10 @@ app.post('/api/auth/register', requireAuth, requireAdmin, (req, res) => {
   res.json(result);
 });
 
-// Get current user profile
 app.get('/api/auth/me', requireAuth, (req, res) => {
   res.json({ success: true, user: req.user });
 });
 
-// Change password (any user)
 app.post('/api/auth/change-password', requireAuth, (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
@@ -124,26 +119,20 @@ app.post('/api/auth/change-password', requireAuth, (req, res) => {
 
 // ─── ADMIN ROUTES ──────────────────────────────────────────
 
-// Admin: list all users
 app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
-  const users = getAllUsers();
-  res.json({ success: true, users });
+  res.json({ success: true, users: getAllUsers() });
 });
 
-// Admin: get full user data (accounts, servers, proxies, etc.)
 app.get('/api/admin/users/:id/data', requireAuth, requireAdmin, (req, res) => {
   const summary = getAllUsersSummary().find(u => u.id === req.params.id);
   if (!summary) return res.status(404).json({ success: false, error: 'User not found' });
   res.json({ success: true, data: summary });
 });
 
-// Admin: get all users with full data
 app.get('/api/admin/users-all', requireAuth, requireAdmin, (req, res) => {
-  const all = getAllUsersSummary();
-  res.json({ success: true, users: all });
+  res.json({ success: true, users: getAllUsersSummary() });
 });
 
-// Admin: create user
 app.post('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
   if (!username || !email || !password) {
@@ -156,17 +145,12 @@ app.post('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
   res.json(result);
 });
 
-// Admin: update user profile (username)
 app.put('/api/admin/users/:id', requireAuth, requireAdmin, (req, res) => {
   const { username } = req.body;
-  if (username) {
-    const result = updateUserProfile(req.params.id, username);
-    return res.json(result);
-  }
+  if (username) return res.json(updateUserProfile(req.params.id, username));
   res.status(400).json({ success: false, error: 'Username required' });
 });
 
-// Admin: reset user password
 app.post('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, (req, res) => {
   const { newPassword } = req.body;
   if (!newPassword) return res.status(400).json({ success: false, error: 'New password required' });
@@ -176,49 +160,38 @@ app.post('/api/admin/users/:id/reset-password', requireAuth, requireAdmin, (req,
   res.json({ success: true, message: 'Password reset' });
 });
 
-// Admin: delete user
 app.delete('/api/admin/users/:id', requireAuth, requireAdmin, (req, res) => {
   const result = deleteUser(req.params.id);
-  if (result.success) {
-    logLoginAction(req.user.id, req.user.username, 'admin_delete_user', `Deleted user ${req.params.id}`, req.ip);
-  }
+  if (result.success) logLoginAction(req.user.id, req.user.username, 'admin_delete_user', `Deleted user ${req.params.id}`, req.ip);
   res.json(result);
 });
 
-// Admin: activity logs
 app.get('/api/admin/logs', requireAuth, requireAdmin, (req, res) => {
-  const limit = parseInt(req.query.limit) || 100;
-  const logs = getLoginLogs(limit);
-  res.json({ success: true, logs });
+  res.json({ success: true, logs: getLoginLogs(parseInt(req.query.limit) || 100) });
 });
 
-// Admin: metrics
 app.get('/api/admin/metrics', requireAuth, requireAdmin, (req, res) => {
   const db = getDB();
-  const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  const totalAccounts = db.prepare('SELECT COUNT(*) as count FROM accounts').get().count;
-  const totalServers = db.prepare('SELECT COUNT(*) as count FROM servers').get().count;
-  const totalProxies = db.prepare('SELECT COUNT(*) as count FROM proxies').get().count;
   res.json({
     success: true,
-    metrics: { totalUsers, totalAccounts, totalServers, totalProxies }
+    metrics: {
+      totalUsers: db.prepare('SELECT COUNT(*) as count FROM users').get().count,
+      totalAccounts: db.prepare('SELECT COUNT(*) as count FROM accounts').get().count,
+      totalServers: db.prepare('SELECT COUNT(*) as count FROM servers').get().count,
+      totalProxies: db.prepare('SELECT COUNT(*) as count FROM proxies').get().count
+    }
   });
 });
 
-// ─── USER ROUTES (self-service) ────────────────────────────
+// ─── USER ROUTES ───────────────────────────────────────────
 
-// User: change own password
 app.post('/api/user/change-password', requireAuth, (req, res) => {
   const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ success: false, error: 'Current and new password required' });
-  }
+  if (!currentPassword || !newPassword) return res.status(400).json({ success: false, error: 'Current and new password required' });
   const { verifyPassword } = require('./src/auth');
   const db = getDB();
   const fullUser = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
-  if (!verifyPassword(currentPassword, fullUser.password_hash)) {
-    return res.status(401).json({ success: false, error: 'Current password is incorrect' });
-  }
+  if (!verifyPassword(currentPassword, fullUser.password_hash)) return res.status(401).json({ success: false, error: 'Current password is incorrect' });
   updateUserPassword(req.user.id, newPassword);
   logLoginAction(req.user.id, req.user.username, 'password_changed', 'Changed own password', req.ip);
   res.json({ success: true, message: 'Password updated' });
@@ -228,177 +201,115 @@ app.post('/api/user/change-password', requireAuth, (req, res) => {
 
 app.post('/api/accounts/lookup-ssid', async (req, res) => {
   let { sessionToken } = req.body;
-  if (!sessionToken) {
-    return res.status(400).json({ success: false, error: 'Bearer / SSID Token is required' });
-  }
-
+  if (!sessionToken) return res.status(400).json({ success: false, error: 'Bearer / SSID Token is required' });
   const cleanToken = sanitizeToken(sessionToken);
-
   try {
     const mojangRes = await fetch('https://api.minecraftservices.com/minecraft/profile', {
-      headers: {
-        'Authorization': `Bearer ${cleanToken}`,
-        'User-Agent': 'PieMC/2.4'
-      }
+      headers: { 'Authorization': `Bearer ${cleanToken}`, 'User-Agent': 'PieMC/2.4' }
     });
-
-    if (mojangRes.status === 401) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid or expired Bearer token. Mojang rejected authentication (401 Unauthorized).'
-      });
-    }
-
-    if (!mojangRes.ok) {
-      const errBody = await mojangRes.text();
-      return res.status(mojangRes.status).json({
-        success: false,
-        error: `Mojang API error (${mojangRes.status}): ${errBody}`
-      });
-    }
-
+    if (mojangRes.status === 401) return res.status(401).json({ success: false, error: 'Invalid or expired Bearer token.' });
+    if (!mojangRes.ok) return res.status(mojangRes.status).json({ success: false, error: `Mojang API error (${mojangRes.status})` });
     const profileData = await mojangRes.json();
     const formattedUUID = formatUUID(profileData.id);
-    const activeSkin = profileData.skins && profileData.skins.length > 0
-      ? (profileData.skins.find(s => s.state === 'ACTIVE') || profileData.skins[0]).url
-      : null;
-
+    const activeSkin = profileData.skins && profileData.skins.length > 0 ? (profileData.skins.find(s => s.state === 'ACTIVE') || profileData.skins[0]).url : null;
     console.log(`[Mojang Verified] Player: ${profileData.name} (UUID: ${formattedUUID})`);
-
     return res.json({
       success: true,
       profile: {
-        username: profileData.name,
-        uuid: formattedUUID,
-        rawId: profileData.id,
-        skinUrl: activeSkin,
+        username: profileData.name, uuid: formattedUUID, rawId: profileData.id, skinUrl: activeSkin,
         avatar: `https://mc-heads.net/avatar/${profileData.name}/28`,
-        expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-        tokenExpiryStatus: 'valid'
+        expiresAt: new Date(Date.now() + 24 * 3600 * 1000).toISOString(), tokenExpiryStatus: 'valid'
       }
     });
   } catch (err) {
     console.error('[Mojang API Fetch Error]', err.message);
-    return res.status(500).json({
-      success: false,
-      error: `Failed to contact Mojang verification service: ${err.message}`
-    });
+    return res.status(500).json({ success: false, error: `Failed to contact Mojang: ${err.message}` });
   }
 });
 
-// ─── ACCOUNTS CRUD (user-scoped) ───────────────────────────
+// ─── ACCOUNTS CRUD ─────────────────────────────────────────
 
 app.get('/api/accounts', requireAuth, (req, res) => {
-  const userId = req.user.id;
   const db = getDB();
-  const accounts = db.prepare('SELECT id, username, uuid, status, created_at FROM accounts WHERE user_id = ?').all(userId);
-  res.json({ success: true, data: accounts });
+  res.json({ success: true, data: db.prepare('SELECT id, username, uuid, status, created_at FROM accounts WHERE user_id = ?').all(req.user.id) });
 });
 
 app.post('/api/accounts/link', requireAuth, (req, res) => {
   const userId = req.user.id;
   const { sessionToken, username, uuid } = req.body;
-
-  if (!sessionToken) {
-    return res.status(400).json({ success: false, error: 'Session Token (SSID / Bearer) is required' });
-  }
-
+  if (!sessionToken) return res.status(400).json({ success: false, error: 'Session Token is required' });
   const id = String(Date.now());
   const finalUsername = username || 'PieBot_' + id.slice(-4);
   const finalUUID = uuid || 'd' + Math.random().toString(16).substring(2, 10) + '-4a11-98bc';
   const encrypted = encryptToken(sessionToken);
-
   const db = getDB();
-  db.prepare(`
-    INSERT INTO accounts (id, user_id, username, uuid, encrypted_token, status)
-    VALUES (?, ?, ?, ?, ?, 'authenticated')
-  `).run(id, userId, finalUsername, finalUUID, encrypted);
-
+  db.prepare('INSERT INTO accounts (id, user_id, username, uuid, encrypted_token, status) VALUES (?, ?, ?, ?, ?, ?)').run(id, userId, finalUsername, finalUUID, encrypted, 'authenticated');
   logLoginAction(userId, req.user.username, 'account_linked', `Linked MC account: ${finalUsername}`, req.ip);
   res.json({ success: true, account: { id, username: finalUsername, uuid: finalUUID, status: 'authenticated' } });
 });
 
 app.post('/api/accounts/:id/reauth', requireAuth, (req, res) => {
-  const userId = req.user.id;
   const { sessionToken } = req.body;
-
-  if (!sessionToken) {
-    return res.status(400).json({ success: false, error: 'Fresh Bearer / SSID is required' });
-  }
-
+  if (!sessionToken) return res.status(400).json({ success: false, error: 'Fresh Bearer token required' });
   const encrypted = encryptToken(sessionToken);
   const db = getDB();
-  db.prepare(`
-    UPDATE accounts SET encrypted_token = ?, status = 'authenticated' WHERE id = ? AND user_id = ?
-  `).run(encrypted, req.params.id, userId);
-
-  res.json({ success: true, message: 'Account session token refreshed' });
+  db.prepare('UPDATE accounts SET encrypted_token = ?, status = ? WHERE id = ? AND user_id = ?').run(encrypted, 'authenticated', req.params.id, req.user.id);
+  res.json({ success: true, message: 'Token refreshed' });
 });
 
 app.delete('/api/accounts/:id', requireAuth, (req, res) => {
-  const userId = req.user.id;
   const db = getDB();
-  db.prepare('DELETE FROM accounts WHERE id = ? AND user_id = ?').run(req.params.id, userId);
+  db.prepare('DELETE FROM accounts WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
   res.json({ success: true });
 });
 
 // ─── SERVERS CRUD ──────────────────────────────────────────
 
 app.get('/api/servers', requireAuth, (req, res) => {
-  const db = getDB();
-  const servers = db.prepare('SELECT * FROM servers WHERE user_id = ?').all(req.user.id);
-  res.json({ success: true, data: servers });
+  res.json({ success: true, data: getDB().prepare('SELECT * FROM servers WHERE user_id = ?').all(req.user.id) });
 });
 
 app.post('/api/servers', requireAuth, (req, res) => {
   const { name, host, port, version } = req.body;
   if (!name || !host) return res.status(400).json({ success: false, error: 'Name and host required' });
   const id = String(Date.now());
-  const db = getDB();
-  db.prepare('INSERT INTO servers (id, user_id, name, host, port, version) VALUES (?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, host, port || 25565, version || '1.21.1');
+  getDB().prepare('INSERT INTO servers (id, user_id, name, host, port, version) VALUES (?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, host, port || 25565, version || '1.21.1');
   res.json({ success: true, server: { id, name, host, port: port || 25565, version: version || '1.21.1' } });
 });
 
 app.put('/api/servers/:id', requireAuth, (req, res) => {
   const { name, host, port, version } = req.body;
-  const db = getDB();
-  db.prepare('UPDATE servers SET name = ?, host = ?, port = ?, version = ? WHERE id = ? AND user_id = ?').run(name, host, port, version, req.params.id, req.user.id);
+  getDB().prepare('UPDATE servers SET name = ?, host = ?, port = ?, version = ? WHERE id = ? AND user_id = ?').run(name, host, port, version, req.params.id, req.user.id);
   res.json({ success: true });
 });
 
 app.delete('/api/servers/:id', requireAuth, (req, res) => {
-  const db = getDB();
-  db.prepare('DELETE FROM servers WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  getDB().prepare('DELETE FROM servers WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
   res.json({ success: true });
 });
 
 // ─── PROXIES CRUD ──────────────────────────────────────────
 
 app.get('/api/proxies', requireAuth, (req, res) => {
-  const db = getDB();
-  const proxies = db.prepare('SELECT * FROM proxies WHERE user_id = ?').all(req.user.id);
-  res.json({ success: true, data: proxies });
+  res.json({ success: true, data: getDB().prepare('SELECT * FROM proxies WHERE user_id = ?').all(req.user.id) });
 });
 
 app.post('/api/proxies', requireAuth, (req, res) => {
   const { name, type, host, port, auth } = req.body;
   if (!name || !type || !host || !port) return res.status(400).json({ success: false, error: 'All fields required' });
   const id = String(Date.now());
-  const db = getDB();
-  db.prepare('INSERT INTO proxies (id, user_id, name, type, host, port, auth) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, type, host, port, auth || 'None');
+  getDB().prepare('INSERT INTO proxies (id, user_id, name, type, host, port, auth) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, req.user.id, name, type, host, port, auth || 'None');
   res.json({ success: true, proxy: { id, name, type, host, port, auth: auth || 'None' } });
 });
 
 app.put('/api/proxies/:id', requireAuth, (req, res) => {
   const { name, type, host, port, auth } = req.body;
-  const db = getDB();
-  db.prepare('UPDATE proxies SET name = ?, type = ?, host = ?, port = ?, auth = ? WHERE id = ? AND user_id = ?').run(name, type, host, port, auth, req.params.id, req.user.id);
+  getDB().prepare('UPDATE proxies SET name = ?, type = ?, host = ?, port = ?, auth = ? WHERE id = ? AND user_id = ?').run(name, type, host, port, auth, req.params.id, req.user.id);
   res.json({ success: true });
 });
 
 app.delete('/api/proxies/:id', requireAuth, (req, res) => {
-  const db = getDB();
-  db.prepare('DELETE FROM proxies WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  getDB().prepare('DELETE FROM proxies WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
   res.json({ success: true });
 });
 
@@ -417,25 +328,22 @@ wss.on('connection', (ws, req) => {
         const cfg = payload.config || {};
         const hasToken = !!(cfg.account && cfg.account.rawToken);
         console.log(`[WS] start_bot userId=${payload.userId} instance=${payload.instanceId} account=${cfg.account ? cfg.account.username : 'none'} server=${cfg.server ? cfg.server.host + ':' + cfg.server.port : 'none'} hasToken=${hasToken}`);
-        const inst = botManager.getOrCreateInstance(
-          payload.userId || 'default',
-          payload.instanceId,
-          cfg
-        );
+        const inst = botManager.getOrCreateInstance(payload.userId || 'default', payload.instanceId, cfg);
+        // Forward bot events to this WebSocket client
+        inst.removeAllListeners('status');
+        inst.removeAllListeners('chat');
+        inst.on('status', (data) => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'bot_status', ...data }));
+        });
+        inst.on('chat', (data) => {
+          if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'bot_chat', ...data }));
+        });
         inst.start();
       } else if (payload.type === 'stop_bot') {
-        const inst = botManager.getOrCreateInstance(
-          payload.userId || 'default',
-          payload.instanceId,
-          {}
-        );
+        const inst = botManager.getOrCreateInstance(payload.userId || 'default', payload.instanceId, {});
         inst.stop();
       } else if (payload.type === 'chat') {
-        const inst = botManager.getOrCreateInstance(
-          payload.userId || 'default',
-          payload.instanceId,
-          {}
-        );
+        const inst = botManager.getOrCreateInstance(payload.userId || 'default', payload.instanceId, {});
         inst.sendChat(payload.message);
       }
     } catch (e) {}
@@ -444,188 +352,6 @@ wss.on('connection', (ws, req) => {
 
 wss.on('error', (err) => {
   console.error('[WS] Server error:', err.message);
-});
-
-// ─── DEBUG API (temporary - test bot connection from Render) ──
-app.get('/api/debug', (req, res) => {
-  const cmd = req.query.cmd || 'status';
-  const logs = [];
-  const origLog = console.log;
-  const origWarn = console.warn;
-  const origError = console.error;
-
-  // Capture console output
-  const capture = (...args) => logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-  console.log = capture;
-  console.warn = capture;
-  console.error = capture;
-
-  try {
-    if (cmd === 'status') {
-      const instances = [];
-      botManager.instances.forEach((inst, key) => {
-        instances.push({
-          key, name: inst.name, status: inst.status, userId: inst.userId,
-          hasBot: !!inst.bot,
-          botUsername: inst.bot ? inst.bot.username : null,
-          reconnectAttempts: inst.reconnectAttempts,
-          config: inst.config ? {
-            host: inst.config.server ? inst.config.server.host : null,
-            port: inst.config.server ? inst.config.server.port : null,
-            version: inst.config.server ? inst.config.server.version : null,
-            accountUsername: inst.config.account ? inst.config.account.username : null,
-            hasToken: !!(inst.config.account && inst.config.account.rawToken)
-          } : null
-        });
-      });
-      res.json({ success: true, command: 'status', instances, totalInstances: instances.length, nodeVersion: process.version, platform: process.platform });
-    } else if (cmd === 'start') {
-      const userId = req.query.userId || 'admin_001';
-      const instanceId = parseInt(req.query.instanceId) || 1;
-      const serverHost = req.query.host || 'as.catpvp.net';
-      const serverPort = parseInt(req.query.port) || 25565;
-      const version = req.query.version || '1.21.1';
-      const token = req.query.token || '';
-      const username = req.query.username || 'Bot';
-      const uuid = req.query.uuid || '';
-
-      const config = {
-        name: 'Debug Instance ' + instanceId,
-        server: { host: serverHost, port: serverPort, version },
-        account: token ? { username, uuid: uuid.replace(/-/g, ''), rawToken: token } : { username },
-        proxy: null,
-        triggers: [],
-        automations: []
-      };
-
-      console.log(`[DEBUG] Starting bot: user=${userId} instance=${instanceId} server=${serverHost}:${serverPort} account=${username} hasToken=${!!token}`);
-      const inst = botManager.getOrCreateInstance(userId, instanceId, config);
-
-      // Capture bot events for debug
-      const debugLogs = [];
-      const onChat = (msg) => debugLogs.push(`[${msg.tag}] ${msg.msg}`);
-      inst.on('chat', onChat);
-
-      inst.start();
-
-      // Wait 8 seconds then return status with captured logs
-      setTimeout(() => {
-        inst.removeListener('chat', onChat);
-        console.log(`[DEBUG] Bot status after 8s: ${inst.status}`);
-      }, 8000);
-
-      res.json({
-        success: true,
-        command: 'start',
-        message: `Bot starting on ${serverHost}:${serverPort}... Check /api/debug?cmd=status in 10 seconds`,
-        config: { serverHost, serverPort, version, username, hasToken: !!token, uuid: uuid ? uuid.replace(/-/g, '') : null }
-      });
-    } else if (cmd === 'stop') {
-      const userId = req.query.userId || 'admin_001';
-      const instanceId = parseInt(req.query.instanceId) || 1;
-      const key = `${userId}:${instanceId}`;
-      const inst = botManager.instances.get(key);
-      if (inst) {
-        inst.stop();
-        res.json({ success: true, command: 'stop', message: 'Bot stopped' });
-      } else {
-        res.json({ success: false, command: 'stop', error: 'No bot instance found' });
-      }
-    } else if (cmd === 'logs') {
-      const limit = parseInt(req.query.limit) || 50;
-      const { getLoginLogs } = require('./src/auth');
-      const logs = getLoginLogs(limit);
-      res.json({ success: true, command: 'logs', data: logs });
-    } else if (cmd === 'test-token') {
-      const token = req.query.token;
-      if (!token) return res.json({ success: false, error: 'Provide ?token=YOUR_TOKEN' });
-      // Verify with Mojang
-      fetch('https://api.minecraftservices.com/minecraft/profile', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      }).then(r => r.json()).then(data => {
-        if (data.name) {
-          res.json({ success: true, username: data.name, uuid: data.id, valid: true });
-        } else {
-          res.json({ success: false, error: 'Token rejected by Mojang', data });
-        }
-      }).catch(e => res.json({ success: false, error: e.message }));
-    } else if (cmd === 'test-connection') {
-      const token = req.query.token;
-      const host = req.query.host || 'as.catpvp.net';
-      const port = parseInt(req.query.port) || 25565;
-      const version = req.query.version || '1.21.1';
-      const username = req.query.username || 'TestBot';
-      const uuid = (req.query.uuid || '').replace(/-/g, '');
-
-      if (!token) return res.json({ success: false, error: 'Provide ?token=YOUR_TOKEN' });
-
-      let mineflayer;
-      try { mineflayer = require('mineflayer'); } catch(e) { return res.json({ success: false, error: 'mineflayer not available' }); }
-
-      const bot = mineflayer.createBot({
-        host, port, username, version,
-        auth: (client, opts) => {
-          client.session = opts.session;
-          client.username = opts.username;
-          client.uuid = opts.session.selectedProfile.id;
-          opts.connect(client);
-        },
-        haveCredentials: true,
-        accessToken: token,
-        session: {
-          accessToken: token,
-          selectedProfile: { id: uuid, name: username },
-          availableProfile: [{ id: uuid, name: username }]
-        }
-      });
-
-      const result = { host, port, version, username, hasToken: true, uuid };
-
-      const timeout = setTimeout(() => {
-        result.status = 'timeout';
-        result.message = 'Bot did not spawn within 15s';
-        try { bot.quit(); } catch(e) {}
-        res.json(result);
-      }, 15000);
-
-      bot.on('login', () => { result.login = true; console.log('[DEBUG] test-connection LOGIN'); });
-      bot.on('spawn', () => {
-        clearTimeout(timeout);
-        result.status = 'success';
-        result.message = `Bot joined as ${bot.username}! Players: ${Object.keys(bot.players).length}`;
-        result.playerCount = Object.keys(bot.players).length;
-        bot.quit();
-        res.json(result);
-      });
-      bot.on('kicked', (r) => {
-        clearTimeout(timeout);
-        result.status = 'kicked';
-        result.message = typeof r === 'string' ? r : JSON.stringify(r);
-        res.json(result);
-      });
-      bot.on('error', (e) => {
-        result.lastError = e.message;
-        console.error('[DEBUG] test-connection error:', e.message);
-      });
-      bot.on('end', (r) => {
-        if (!result.status) {
-          clearTimeout(timeout);
-          result.status = 'ended';
-          result.message = 'Disconnected: ' + r;
-          res.json(result);
-        }
-      });
-    } else {
-      res.json({ success: false, error: 'Unknown command. Use: status, start, stop, logs, test-token, test-connection' });
-    }
-  } catch (e) {
-    res.json({ success: false, error: e.message });
-  } finally {
-    console.log = origLog;
-    console.warn = origWarn;
-    console.error = origError;
-    if (logs.length > 0) console.log('[DEBUG API logs]', logs.join('\n'));
-  }
 });
 
 // ─── START SERVER ──────────────────────────────────────────
