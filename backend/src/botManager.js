@@ -122,14 +122,33 @@ class BotInstance extends EventEmitter {
         clearTimeout(spawnTimeout);
         this.status = 'online';
         this.reconnectAttempts = 0;
-        console.log(`[BotManager] Bot "${this.name}" spawned and ready!`);
+
+        const playerCount = Object.keys(this.bot.players).length;
+        const serverAddr = `${botOptions.host}:${botOptions.port}`;
+        const version = botOptions.version || 'auto';
+
+        console.log(`\n${'='.repeat(50)}`);
+        console.log(`[BotManager] Bot "${this.name}" SPAWNED AND READY!`);
+        console.log(`   Server: ${serverAddr}`);
+        console.log(`   Username: ${botOptions.username}`);
+        console.log(`   Version: ${version}`);
+        console.log(`   Players online: ${playerCount}`);
+        console.log(`${'='.repeat(50)}\n`);
+
         this.emit('status', { userId: this.userId, instanceId: this.id, status: this.status });
         this.emit('chat', {
           time: new Date().toTimeString().split(' ')[0],
           player: 'SYSTEM',
-          tag: '[SYSTEM]',
-          msg: `Connected to ${botOptions.host}:${botOptions.port} as ${botOptions.username}`,
+          tag: '[JOINED]',
+          msg: `Connected to ${serverAddr} as ${botOptions.username} | ${playerCount} players online | v${version}`,
           type: 'system'
+        });
+        this.emit('chat', {
+          time: new Date().toTimeString().split(' ')[0],
+          player: 'SYSTEM',
+          tag: '[SOUND]',
+          msg: 'BOT_JOINED',
+          type: 'sound'
         });
         this.startAutomations();
       });
