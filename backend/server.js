@@ -412,10 +412,13 @@ wss.on('connection', (ws) => {
       const payload = JSON.parse(data);
 
       if (payload.type === 'start_bot') {
+        const cfg = payload.config || {};
+        const hasToken = !!(cfg.account && cfg.account.rawToken);
+        console.log(`[WS] start_bot userId=${payload.userId} instance=${payload.instanceId} account=${cfg.account ? cfg.account.username : 'none'} server=${cfg.server ? cfg.server.host + ':' + cfg.server.port : 'none'} hasToken=${hasToken}`);
         const inst = botManager.getOrCreateInstance(
           payload.userId || 'default',
           payload.instanceId,
-          payload.config || {}
+          cfg
         );
         inst.start();
       } else if (payload.type === 'stop_bot') {

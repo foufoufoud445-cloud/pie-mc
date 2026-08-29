@@ -54,6 +54,9 @@ class BotInstance extends EventEmitter {
     try {
       const hasToken = !!(this.config.account && this.config.account.rawToken);
 
+      // Mineflayer/minecraft-protocol expects UUID WITHOUT dashes in selectedProfile.id
+      const rawUuid = this.config.account && this.config.account.uuid ? this.config.account.uuid.replace(/-/g, '') : '';
+
       const botOptions = {
         host: (this.config.server && this.config.server.host) || '127.0.0.1',
         port: (this.config.server && this.config.server.port) || 25565,
@@ -65,13 +68,13 @@ class BotInstance extends EventEmitter {
         session: hasToken ? {
           accessToken: this.config.account.rawToken,
           selectedProfile: {
-            id: this.config.account.uuid,
+            id: rawUuid,
             name: this.config.account.username
           }
         } : undefined
       };
 
-      console.log(`[BotManager] Starting bot "${botOptions.username}" -> ${botOptions.host}:${botOptions.port} (auth: ${hasToken ? 'token' : 'microsoft'})`);
+      console.log(`[BotManager] Starting bot "${botOptions.username}" -> ${botOptions.host}:${botOptions.port} (auth: ${hasToken ? 'token' : 'microsoft'}, uuid: ${rawUuid})`);
 
       // Proxy Routing per bot
       if (this.config.proxy && this.config.proxy.type !== 'Direct') {
@@ -257,6 +260,13 @@ class BotManager {
     if (!this.instances.has(key)) {
       const instance = new BotInstance(userId || 'default', id, config, this.globalSettings);
       this.instances.set(key, instance);
+    } else {
+      // Update config when instance already exists (e.g. user changed account/server)
+      const existing = this.instances.get(key);
+      if (config && Object.keys(config).length > 0) {
+        existing.config = { ...existing.config, ...config };
+        existing.name = config.name || existing.name;
+      }
     }
     return this.instances.get(key);
   }

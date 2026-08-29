@@ -210,7 +210,13 @@ function saveState(newState) {
   } catch (e) {}
 }
 
-const state = getStoredState();
+// State must be refreshed per-page-load so different users don't see each other's data
+let state = getStoredState();
+
+window.refreshState = function() {
+  state = getStoredState();
+  return state;
+};
 
 window.updatePieState = function(mutator) {
   mutator(state);
@@ -751,6 +757,11 @@ function onBotMessage(fn) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Refresh state for the current user (prevents data leaking between accounts)
+  const user = getCurrentUser();
+  if (user) {
+    state = getStoredState();
+  }
   initParticleCanvas();
   connectBotWs();
 });
