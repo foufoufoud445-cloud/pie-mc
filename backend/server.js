@@ -85,19 +85,17 @@ app.post('/api/auth/login', (req, res) => {
   res.json(result);
 });
 
-// Register (admin can create users, anyone can self-register if enabled)
-app.post('/api/auth/register', (req, res) => {
+// Register - Admin only
+app.post('/api/auth/register', requireAuth, requireAdmin, (req, res) => {
   const { username, email, password, role } = req.body;
   if (!username || !email || !password) {
     return res.status(400).json({ success: false, error: 'Username, email, and password are required' });
   }
-  // Only admin can create admin accounts
-  const requestingUser = req.headers['x-user-id'] ? getUserById(req.headers['x-user-id']) : null;
-  const finalRole = (role === 'admin' && requestingUser && requestingUser.role === 'admin') ? 'admin' : 'user';
+  const finalRole = (role === 'admin' && req.user.role === 'admin') ? 'admin' : 'user';
 
   const result = createUser(username, email, password, finalRole);
   if (result.success) {
-    logLoginAction(result.user.id, result.user.username, 'account_created', `Created by ${requestingUser ? requestingUser.username : 'self'}`, req.ip);
+    logLoginAction(result.user.id, result.user.username, 'account_created', `Created by admin ${req.user.username}`, req.ip);
   }
   res.json(result);
 });
