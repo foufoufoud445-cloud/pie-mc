@@ -46,6 +46,7 @@
               <th class="px-4 py-3">UUID</th>
               <th class="px-4 py-3">Type</th>
               <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Expires</th>
               <th class="px-4 py-3">Linked</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -141,7 +142,7 @@
       if (state.accounts.length === 0) {
         tbody.innerHTML = `
           <tr>
-            <td colspan="6" class="px-4 py-12 text-center text-slate-500 font-mono">
+            <td colspan="7" class="px-4 py-12 text-center text-slate-500 font-mono">
               <p class="text-sm text-slate-400 font-semibold mb-1">No Minecraft accounts linked yet</p>
               <p class="text-xs">Click <strong>"Link Account by SSID"</strong> above to paste your Microsoft Bearer token.</p>
             </td>
@@ -156,6 +157,29 @@
           statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">NEEDS RE-AUTH</span>`;
         }
 
+        // Decode token expiry
+        let expiryHtml = '<span class="text-slate-600">-</span>';
+        if (a.rawToken) {
+          try {
+            const parts = a.rawToken.split('.');
+            if (parts.length >= 2) {
+              const payload = JSON.parse(atob(parts[1]));
+              if (payload.exp) {
+                const now = Math.floor(Date.now() / 1000);
+                const remaining = payload.exp - now;
+                const hours = Math.floor(Math.abs(remaining) / 3600);
+                const mins = Math.floor((Math.abs(remaining) % 3600) / 60);
+                if (remaining > 0) {
+                  expiryHtml = `<span class="text-emerald-400 font-mono">${hours}h ${mins}m</span>`;
+                } else {
+                  expiryHtml = `<span class="text-red-400 font-mono">EXPIRED</span>`;
+                  statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/15 text-red-400 border border-red-500/30">EXPIRED</span>`;
+                }
+              }
+            }
+          } catch(e) {}
+        }
+
         return `
           <tr class="hover:bg-slate-900/40 transition-colors">
             <td class="px-4 py-3">
@@ -167,6 +191,7 @@
             <td class="px-4 py-3 text-slate-400 font-mono text-[11px]">${a.uuid}</td>
             <td class="px-4 py-3"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PREMIUM</span></td>
             <td class="px-4 py-3">${statusBadge}</td>
+            <td class="px-4 py-3">${expiryHtml}</td>
             <td class="px-4 py-3 text-slate-500 text-[11px]">${a.added}</td>
             <td class="px-4 py-3 text-right space-x-2">
               <button onclick="openReauthModal('${a.id}', '${a.username}')" class="btn-secondary text-xs px-2.5 py-1 text-amber-400 hover:text-amber-300" title="Refresh Token">
@@ -202,6 +227,26 @@
         const profile = await window.autoResolveSSID(token);
         pendingProfile = { ...profile, rawToken: token };
 
+        // Decode token expiry
+        let expiryText = '';
+        try {
+          const parts = token.split('.');
+          if (parts.length >= 2) {
+            const payload = JSON.parse(atob(parts[1]));
+            if (payload.exp) {
+              const now = Math.floor(Date.now() / 1000);
+              const remaining = payload.exp - now;
+              const hours = Math.floor(Math.abs(remaining) / 3600);
+              const mins = Math.floor((Math.abs(remaining) % 3600) / 60);
+              if (remaining > 0) {
+                expiryText = `<span class="text-emerald-400">${hours}h ${mins}m remaining</span>`;
+              } else {
+                expiryText = `<span class="text-red-400">EXPIRED ${hours}h ${mins}m ago</span>`;
+              }
+            }
+          }
+        } catch(e) {}
+
         // Show verified result
         detectText.innerHTML = `
           <div class="flex items-center space-x-3 w-full">
@@ -212,6 +257,7 @@
                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PREMIUM</span>
               </div>
               <p class="text-[10px] text-slate-500 font-mono mt-0.5">UUID: ${profile.uuid}</p>
+              ${expiryText ? `<p class="text-[10px] font-mono mt-0.5">Expires: ${expiryText}</p>` : ''}
             </div>
             <button onclick="confirmAddAccount()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all">
               + Add Account
