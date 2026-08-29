@@ -278,8 +278,28 @@ wss.on('connection', (ws) => {
   ws.on('message', (data) => {
     try {
       const payload = JSON.parse(data);
-      if (payload.type === 'chat') {
-        const inst = botManager.getOrCreateInstance(payload.userId || 'default', payload.instanceId, {});
+
+      if (payload.type === 'start_bot') {
+        // Frontend sends full bot config when starting an instance
+        const inst = botManager.getOrCreateInstance(
+          payload.userId || 'default',
+          payload.instanceId,
+          payload.config || {}
+        );
+        inst.start();
+      } else if (payload.type === 'stop_bot') {
+        const inst = botManager.getOrCreateInstance(
+          payload.userId || 'default',
+          payload.instanceId,
+          {}
+        );
+        inst.stop();
+      } else if (payload.type === 'chat') {
+        const inst = botManager.getOrCreateInstance(
+          payload.userId || 'default',
+          payload.instanceId,
+          {}
+        );
         inst.sendChat(payload.message);
       }
     } catch (e) {}

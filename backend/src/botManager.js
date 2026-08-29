@@ -52,13 +52,17 @@ class BotInstance extends EventEmitter {
     }
 
     try {
+      const hasToken = !!(this.config.account && this.config.account.rawToken);
+
       const botOptions = {
         host: (this.config.server && this.config.server.host) || '127.0.0.1',
         port: (this.config.server && this.config.server.port) || 25565,
         username: (this.config.account && this.config.account.username) || 'PieBot',
         version: (this.config.server && this.config.server.version) || '1.21.1',
-        auth: 'microsoft',
-        session: (this.config.account && this.config.account.rawToken) ? {
+        // Only use 'microsoft' auth when NO token is provided — let mineflayer do the full OAuth flow.
+        // When a token IS provided, mineflayer will use it directly without forcing a fresh login.
+        auth: hasToken ? undefined : 'microsoft',
+        session: hasToken ? {
           accessToken: this.config.account.rawToken,
           selectedProfile: {
             id: this.config.account.uuid,
@@ -66,6 +70,8 @@ class BotInstance extends EventEmitter {
           }
         } : undefined
       };
+
+      console.log(`[BotManager] Starting bot "${botOptions.username}" -> ${botOptions.host}:${botOptions.port} (auth: ${hasToken ? 'token' : 'microsoft'})`);
 
       // Proxy Routing per bot
       if (this.config.proxy && this.config.proxy.type !== 'Direct') {
@@ -102,11 +108,13 @@ class BotInstance extends EventEmitter {
       });
 
       this.bot.on('kicked', (reason) => {
+        console.warn(`[BotManager] Bot "${this.name}" kicked:`, reason);
         this.emit('log', { instance: this.name, event: 'Kicked', details: JSON.stringify(reason) });
         this.handleDisconnect();
       });
 
       this.bot.on('error', (err) => {
+        console.error(`[BotManager] Bot "${this.name}" error:`, err.message);
         this.emit('log', { instance: this.name, event: 'Error', details: err.message });
       });
 
