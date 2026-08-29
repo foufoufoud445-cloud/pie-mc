@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — 404 Page Not Found</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 bg-[#090b10] relative overflow-hidden text-center">
+
+  <div class="absolute -top-32 -left-32 w-96 h-96 bg-[#2cf5d6]/10 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+  <div class="pie-card max-w-lg w-full p-10 space-y-6 relative z-10 border border-[#1c2333] shadow-2xl">
+    <div class="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/30 mx-auto flex items-center justify-center text-red-400">
+      <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+    </div>
+
+    <div class="space-y-2">
+      <span class="px-3 py-1 rounded-md bg-red-500/15 text-red-400 border border-red-500/30 text-xs font-mono font-bold uppercase">404 ERROR</span>
+      <h1 class="text-2xl font-black text-white">Page Not Found</h1>
+      <p class="text-xs text-slate-400 font-mono max-w-sm mx-auto leading-relaxed">
+        The page you are looking for does not exist or has been moved.
+      </p>
+    </div>
+
+    <div class="pt-2 flex items-center justify-center space-x-3">
+      <a href="dashboard.html" class="btn-primary px-6 py-2.5 no-underline text-xs">
+        <span>&larr; Return to Dashboard</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

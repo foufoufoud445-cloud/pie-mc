@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Admin Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <!-- Admin Hero Banner -->
+    <div class="pie-card p-6 space-y-4 border border-[#2cf5d6]/30 shadow-2xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 rounded-xl bg-[#2cf5d6]/10 text-[#2cf5d6] border border-[#2cf5d6]/30 flex items-center justify-center">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-2xl font-black text-white">Owner Admin Console</h1>
+              <span class="badge-diamond text-xs font-mono">ADMIN ACCESS</span>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-0.5">Database storage mode, platform controls, and user counts</p>
+          </div>
+        </div>
+        <a href="dashboard.html" class="btn-secondary text-xs px-4 py-2 no-underline">
+          &larr; Back to Dashboard
+        </a>
+      </div>
+
+      <!-- Privacy Notice -->
+      <div class="p-3.5 rounded-xl bg-[#0a0d14] border border-cyan-500/30 flex items-start space-x-3 text-xs">
+        <svg class="w-5 h-5 text-cyan-400 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <div class="text-slate-300 leading-relaxed">
+          <strong class="text-[#2cf5d6]">Privacy Notice:</strong>
+          <span> Account tokens, passwords, and Minecraft player names remain private and encrypted. Only platform counts and user quantities are visible.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Platform Stats -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="pie-card p-4 flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-black text-white" id="teleTotalUsers">14</div>
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Users</div>
+        </div>
+      </div>
+
+      <div class="pie-card p-4 flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-black text-white" id="teleTotalAccounts">29</div>
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Linked Accounts</div>
+        </div>
+      </div>
+
+      <div class="pie-card p-4 flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-[#2cf5d6]">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-black text-white" id="teleActiveBots">8</div>
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Bots</div>
+        </div>
+      </div>
+
+      <div class="pie-card p-4 flex items-center space-x-4">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect></svg>
+        </div>
+        <div>
+          <div class="text-2xl font-black text-white" id="teleTotalServers">12</div>
+          <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Servers</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRI-MODE DATABASE ENGINE MANAGER -->
+    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
+      <div class="flex items-center justify-between pb-3 border-b border-[#1c2333]">
+        <div class="flex items-center space-x-2.5">
+          <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          <h2 class="text-lg font-bold text-white">Database Storage Engine</h2>
+        </div>
+        <span id="activeDbBadge" class="badge-diamond font-mono text-xs uppercase">SQLITE ACTIVE</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div onclick="selectDbMode('local_json')" id="cardModeJson" class="pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-sm">1. Local JSON</span>
+            <input type="radio" name="dbRadio" id="radioJson" class="text-[#2cf5d6]">
+          </div>
+          <p class="text-xs text-slate-400">
+            Stores data in <code>backend/data/json_store/</code>. Zero-dependency flat files.
+          </p>
+        </div>
+
+        <div onclick="selectDbMode('sqlite')" id="cardModeSqlite" class="pie-card-inner p-4 cursor-pointer border border-[#2cf5d6]/40 bg-[#2cf5d6]/5 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-sm">2. SQLite</span>
+            <input type="radio" name="dbRadio" id="radioSqlite" checked class="text-[#2cf5d6]">
+          </div>
+          <p class="text-xs text-slate-400">
+            Fast embedded database in <code>pie-mc.db</code>. Recommended for VPS installs.
+          </p>
+        </div>
+
+        <div onclick="selectDbMode('turso')" id="cardModeTurso" class="pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white text-sm">3. Turso (libSQL)</span>
+            <input type="radio" name="dbRadio" id="radioTurso" class="text-[#2cf5d6]">
+          </div>
+          <p class="text-xs text-slate-400">
+            Serverless cloud database with remote backups and edge replication.
+          </p>
+        </div>
+      </div>
+
+      <div id="dbConfigDetails" class="space-y-4 pt-2">
+        <div id="tursoFields" class="hidden space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-300">TURSO_DATABASE_URL</label>
+            <input id="inputTursoUrl" type="text" placeholder="libsql://your-db.turso.io" class="pie-input w-full font-mono text-xs">
+          </div>
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-300">TURSO_AUTH_TOKEN</label>
+            <input id="inputTursoToken" type="password" placeholder="Paste Turso Auth Token..." class="pie-input w-full font-mono text-xs text-[#2cf5d6]">
+          </div>
+        </div>
+
+        <div id="sqliteFields" class="space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-300">SQLite Database Path</label>
+            <input id="inputSqlitePath" type="text" value="backend/data/pie-mc.db" class="pie-input w-full font-mono text-xs">
+          </div>
+        </div>
+
+        <div id="jsonFields" class="hidden space-y-3 p-4 rounded-xl bg-[#0a0d14] border border-[#1c2333]">
+          <div class="space-y-1">
+            <label class="block text-xs font-semibold text-slate-300">JSON Directory Path</label>
+            <input id="inputJsonPath" type="text" value="backend/data/json_store/" class="pie-input w-full font-mono text-xs">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="applyDatabaseConfig()" class="btn-primary">
+          <span>Set Database & Create Tables</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- OWNER PLATFORM FEATURE TOGGLES -->
+    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
+      <div class="flex items-center space-x-2.5 pb-3 border-b border-[#1c2333]">
+        <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <h2 class="text-lg font-bold text-white">Platform Settings & Controls</h2>
+      </div>
+
+      <div class="space-y-4">
+        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-3">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-bold text-white text-sm block">Allow Users to Change Minecraft Version</span>
+              <span class="text-xs text-slate-400">When disabled, users are locked to your chosen Minecraft version.</span>
+            </div>
+            <input type="checkbox" id="flagAllowVersion" onchange="toggleVersionSelectorVisibility(this.checked)" checked class="w-5 h-5 rounded text-[#2cf5d6]">
+          </label>
+
+          <div id="lockedVersionBox" class="hidden pt-2 border-t border-[#1c2333] space-y-1">
+            <label class="text-xs font-semibold text-amber-400">Locked Global Version:</label>
+            <select id="selectLockedVersion" class="pie-select w-full font-mono text-xs">
+              <option value="1.21.1">1.21.1</option>
+              <option value="1.20.4">1.20.4</option>
+              <option value="1.19.4">1.19.4</option>
+              <option value="1.16.5">1.16.5</option>
+              <option value="1.8.9">1.8.9</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333]">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-bold text-white text-sm block">Allow Auto-Reconnect</span>
+              <span class="text-xs text-slate-400">Allows bots to automatically reconnect if dropped.</span>
+            </div>
+            <input type="checkbox" id="flagAllowReconnect" checked class="w-5 h-5 rounded text-[#2cf5d6]">
+          </label>
+        </div>
+
+        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333]">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="font-bold text-white text-sm block">Allow New Registrations</span>
+              <span class="text-xs text-slate-400">Allow new Discord users to sign in.</span>
+            </div>
+            <input type="checkbox" id="flagAllowRegistrations" checked class="w-5 h-5 rounded text-[#2cf5d6]">
+          </label>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button onclick="saveOwnerFlags()" class="btn-primary text-xs">
+            Save Settings
+          </button>
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- SEPARATE SESSION & TOKEN LIFETIME MANAGER (ADMIN VS USERS) -->
+    <div class="pie-card p-6 space-y-6 border border-[#1c2333]">
+      <div class="flex items-center space-x-2.5 pb-3 border-b border-[#1c2333]">
+        <svg class="w-5 h-5 text-[#2cf5d6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <h2 class="text-lg font-bold text-white">Session Duration & Token Cleanup Lifetimes</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Regular Users Section -->
+        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-[#1c2333]">
+            <h3 class="font-bold text-white text-sm">Regular Users Policy</h3>
+            <span class="badge-diamond text-[10px]">CLIENTS</span>
+          </div>
+
+          <!-- User Auto-Logout -->
+          <div class="space-y-2">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs font-semibold text-slate-300">Auto-Logout Users after Duration</span>
+              <input type="checkbox" id="chkUserAutoLogout" checked class="w-4 h-4 rounded text-[#2cf5d6]">
+            </label>
+            <div class="flex items-center space-x-2">
+              <input id="inputUserSessionHours" type="number" value="24" class="pie-input w-24 text-xs font-mono">
+              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-mono">Users must re-login via Discord after this period. Saved bots/data are preserved.</p>
+          </div>
+
+          <!-- User Token Cleanup -->
+          <div class="space-y-2 pt-2 border-t border-[#1c2333]">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs font-semibold text-slate-300">Clean/Expire Minecraft Tokens after Age</span>
+              <input type="checkbox" id="chkUserTokenClean" checked class="w-4 h-4 rounded text-[#2cf5d6]">
+            </label>
+            <div class="flex items-center space-x-2">
+              <input id="inputUserTokenAge" type="number" value="24" class="pie-input w-24 text-xs font-mono">
+              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-mono">Flags tokens as Needs Re-Auth so users paste fresh SSIDs.</p>
+          </div>
+        </div>
+
+        <!-- Admin / Owner Section -->
+        <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-4">
+          <div class="flex items-center justify-between pb-2 border-b border-[#1c2333]">
+            <h3 class="font-bold text-white text-sm">Platform Owner / Admin Policy</h3>
+            <span class="badge-online text-[10px]">OWNER</span>
+          </div>
+
+          <!-- Admin Auto-Logout (Default OFF) -->
+          <div class="space-y-2">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs font-semibold text-slate-300">Auto-Logout Admin Session</span>
+              <input type="checkbox" id="chkAdminAutoLogout" class="w-4 h-4 rounded text-[#2cf5d6]">
+            </label>
+            <div class="flex items-center space-x-2">
+              <input id="inputAdminSessionHours" type="number" value="720" class="pie-input w-24 text-xs font-mono">
+              <span class="text-xs text-slate-400 font-mono">Hours (Default: 720h / 30d)</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-mono">Disabled by default: Owner stays logged in permanently until manually logged out.</p>
+          </div>
+
+          <!-- Admin Token Cleanup -->
+          <div class="space-y-2 pt-2 border-t border-[#1c2333]">
+            <label class="flex items-center justify-between cursor-pointer">
+              <span class="text-xs font-semibold text-slate-300">Clean/Expire Admin Minecraft Tokens</span>
+              <input type="checkbox" id="chkAdminTokenClean" checked class="w-4 h-4 rounded text-[#2cf5d6]">
+            </label>
+            <div class="flex items-center space-x-2">
+              <input id="inputAdminTokenAge" type="number" value="24" class="pie-input w-24 text-xs font-mono">
+              <span class="text-xs text-slate-400 font-mono">Hours (Default: 24h)</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-mono">Monitors owner bot token age and alerts when renewal is needed.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
+        <button onclick="saveSessionLifetimes()" class="btn-primary text-xs">
+          Save Lifetime Policies
+        </button>
+      </div>
+    </div>
+
+<!-- USERS OVERVIEW -->
+    <div class="pie-card p-6 space-y-4 border border-[#1c2333]">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold text-white">Registered Users Overview</h2>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
+            <tr>
+              <th class="px-4 py-3">Discord User</th>
+              <th class="px-4 py-3">User ID</th>
+              <th class="px-4 py-3">Joined Date</th>
+              <th class="px-4 py-3">Accounts Linked</th>
+              <th class="px-4 py-3">Instances Running</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="telemetryTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentDbMode = 'sqlite';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = getCurrentUser();
+      if (!user || (!user.isOwner && user.id !== OWNER_DISCORD_ID)) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      renderGlobalHeader('admin');
+      loadPlatformFlagsToUI();
+      renderAdminTelemetry();
+    });
+
+    function selectDbMode(mode) {
+      currentDbMode = mode;
+      document.getElementById('radioJson').checked = (mode === 'local_json');
+      document.getElementById('radioSqlite').checked = (mode === 'sqlite');
+      document.getElementById('radioTurso').checked = (mode === 'turso');
+
+      ['Json', 'Sqlite', 'Turso'].forEach(t => {
+        const el = document.getElementById('cardMode' + t);
+        el.className = 'pie-card-inner p-4 cursor-pointer border hover:border-[#2cf5d6]/50 transition-all space-y-2';
+      });
+
+      const activeCard = document.getElementById(mode === 'local_json' ? 'cardModeJson' : (mode === 'sqlite' ? 'cardModeSqlite' : 'cardModeTurso'));
+      activeCard.className = 'pie-card-inner p-4 cursor-pointer border border-[#2cf5d6]/50 bg-[#2cf5d6]/10 transition-all space-y-2';
+
+      document.getElementById('jsonFields').classList.toggle('hidden', mode !== 'local_json');
+      document.getElementById('sqliteFields').classList.toggle('hidden', mode !== 'sqlite');
+      document.getElementById('tursoFields').classList.toggle('hidden', mode !== 'turso');
+
+      document.getElementById('activeDbBadge').innerText = mode.toUpperCase() + ' SELECTED';
+    }
+
+    
+    function loadPlatformFlagsToUI() {
+      const flags = getPlatformFlags();
+      selectDbMode(flags.databaseMode || 'sqlite');
+
+      document.getElementById('flagAllowVersion').checked = flags.allowUserChangeVersion;
+      toggleVersionSelectorVisibility(flags.allowUserChangeVersion);
+
+      document.getElementById('selectLockedVersion').value = flags.lockedVersion || '1.21.1';
+      document.getElementById('flagAllowReconnect').checked = flags.allowAutoReconnect;
+      document.getElementById('flagAllowRegistrations').checked = flags.allowNewRegistrations;
+
+      // Session & Token lifetime values
+      document.getElementById('chkUserAutoLogout').checked = (flags.userAutoLogoutEnabled !== false);
+      document.getElementById('inputUserSessionHours').value = flags.userSessionDurationHours || 24;
+      document.getElementById('chkUserTokenClean').checked = (flags.userTokenCleanEnabled !== false);
+      document.getElementById('inputUserTokenAge').value = flags.userTokenAgeHours || 24;
+
+      document.getElementById('chkAdminAutoLogout').checked = (flags.adminAutoLogoutEnabled === true);
+      document.getElementById('inputAdminSessionHours').value = flags.adminSessionDurationHours || 720;
+      document.getElementById('chkAdminTokenClean').checked = (flags.adminTokenCleanEnabled !== false);
+      document.getElementById('inputAdminTokenAge').value = flags.adminTokenAgeHours || 24;
+
+      if (flags.tursoUrl) document.getElementById('inputTursoUrl').value = flags.tursoUrl;
+      if (flags.tursoToken) document.getElementById('inputTursoToken').value = flags.tursoToken;
+      if (flags.sqlitePath) document.getElementById('inputSqlitePath').value = flags.sqlitePath;
+      if (flags.jsonStorePath) document.getElementById('inputJsonPath').value = flags.jsonStorePath;
+    }
+
+    function saveSessionLifetimes() {
+      const flags = getPlatformFlags();
+      flags.userAutoLogoutEnabled = document.getElementById('chkUserAutoLogout').checked;
+      flags.userSessionDurationHours = parseInt(document.getElementById('inputUserSessionHours').value) || 24;
+      flags.userTokenCleanEnabled = document.getElementById('chkUserTokenClean').checked;
+      flags.userTokenAgeHours = parseInt(document.getElementById('inputUserTokenAge').value) || 24;
+
+      flags.adminAutoLogoutEnabled = document.getElementById('chkAdminAutoLogout').checked;
+      flags.adminSessionDurationHours = parseInt(document.getElementById('inputAdminSessionHours').value) || 720;
+      flags.adminTokenCleanEnabled = document.getElementById('chkAdminTokenClean').checked;
+      flags.adminTokenAgeHours = parseInt(document.getElementById('inputAdminTokenAge').value) || 24;
+
+      savePlatformFlags(flags);
+      alert('Session and token lifetime policies saved successfully!');
+    }
+
+function toggleVersionSelectorVisibility(allow) {
+      document.getElementById('lockedVersionBox').classList.toggle('hidden', allow);
+    }
+
+    function applyDatabaseConfig() {
+      const flags = getPlatformFlags();
+      flags.databaseMode = currentDbMode;
+      flags.tursoUrl = document.getElementById('inputTursoUrl').value.trim();
+      flags.tursoToken = document.getElementById('inputTursoToken').value.trim();
+      flags.sqlitePath = document.getElementById('inputSqlitePath').value.trim();
+      flags.jsonStorePath = document.getElementById('inputJsonPath').value.trim();
+
+      savePlatformFlags(flags);
+      document.getElementById('activeDbBadge').innerText = currentDbMode.toUpperCase() + ' ACTIVE';
+      alert(`Database set to ${currentDbMode.toUpperCase()}!`);
+    }
+
+    function saveOwnerFlags() {
+      const flags = getPlatformFlags();
+      flags.allowUserChangeVersion = document.getElementById('flagAllowVersion').checked;
+      flags.lockedVersion = document.getElementById('selectLockedVersion').value;
+      flags.allowAutoReconnect = document.getElementById('flagAllowReconnect').checked;
+      flags.allowNewRegistrations = document.getElementById('flagAllowRegistrations').checked;
+
+      savePlatformFlags(flags);
+      alert('Platform settings saved!');
+    }
+
+    function renderAdminTelemetry() {
+      const tele = (window.getDynamicTelemetry) ? window.getDynamicTelemetry() : { totalUsersCount: 1, totalAccountsCount: 0, activeBotsCount: 0, totalServersCount: 0, usersList: [] };
+      document.getElementById('teleTotalUsers').innerText = tele.totalUsersCount;
+      document.getElementById('teleTotalAccounts').innerText = tele.totalAccountsCount;
+      document.getElementById('teleActiveBots').innerText = tele.activeBotsCount;
+      document.getElementById('teleTotalServers').innerText = tele.totalServersCount;
+
+      const tbody = document.getElementById('telemetryTableBody');
+      if (!tele.usersList || tele.usersList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500 font-mono">No registered users in directory.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = tele.usersList.map(u => `
+        <tr class="hover:bg-slate-900/40 transition-colors">
+          <td class="px-4 py-3 font-bold text-white flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full ${u.isOwner ? 'bg-[#2cf5d6]' : 'bg-emerald-400'} pulse-dot"></span>
+            <span>${u.username}</span>
+            ${u.isOwner ? '<span class="badge-diamond text-[9px] px-1.5 py-0.5 ml-1">OWNER</span>' : ''}
+          </td>
+          <td class="px-4 py-3 text-slate-400 font-mono">${u.id}</td>
+          <td class="px-4 py-3 text-slate-500">${u.joined}</td>
+          <td class="px-4 py-3"><span class="badge-online font-bold">${u.accountsCount} Linked</span></td>
+          <td class="px-4 py-3"><span class="badge-diamond font-bold">${u.instancesCount} Active</span></td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="terminateUserInstances('${u.id}', '${u.username}')" class="text-xs text-red-400 hover:text-red-300">Restart Session</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+function terminateUserInstances(uid, uname) {
+      window.showConfirmModal({
+        title: `Restart Session for ${uname}?`,
+        message: `This will safely trigger a reconnect for all active bot instances owned by Discord User <strong>${uname}</strong> (${uid}).`,
+        confirmText: 'Restart Bots',
+        cancelText: 'Cancel',
+        isDanger: false,
+        onConfirm: () => {
+          alert(`Restart signal sent for ${uname}.`);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

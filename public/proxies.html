@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Proxy Pools</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">Proxy Pool Management</h2>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Tunnel bots through SOCKS5, SOCKS4, and HTTP proxies</p>
+        </div>
+        <div class="flex items-center space-x-3">
+          <button onclick="openModal('importModal')" class="btn-secondary text-xs">Import TXT</button>
+          <button onclick="openModal('addPrxModal')" class="btn-primary text-xs">Add Proxy</button>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
+            <tr>
+              <th class="px-4 py-3">Proxy Name</th>
+              <th class="px-4 py-3">Type</th>
+              <th class="px-4 py-3">Host:Port</th>
+              <th class="px-4 py-3">Auth</th>
+              <th class="px-4 py-3">Latency</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="prxTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div id="addPrxModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="pie-card p-6 max-w-md w-full space-y-4 border border-[#1c2333]">
+      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+        <h3 class="text-lg font-bold text-white">Add Proxy</h3>
+        <button onclick="closeModal('addPrxModal')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Name</label>
+          <input id="modalPrxName" type="text" placeholder="e.g. US SOCKS5 Node" class="pie-input w-full">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Type</label>
+          <select id="modalPrxType" class="pie-select w-full">
+            <option value="SOCKS5">SOCKS5</option>
+            <option value="SOCKS4">SOCKS4</option>
+            <option value="HTTP">HTTP</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="col-span-2">
+            <label class="block font-semibold text-slate-300 mb-1">Host</label>
+            <input id="modalPrxHost" type="text" placeholder="192.168.1.1" class="pie-input w-full font-mono">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Port</label>
+            <input id="modalPrxPort" type="number" placeholder="1080" class="pie-input w-full font-mono">
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="closeModal('addPrxModal')" class="btn-secondary text-xs">Cancel</button>
+        <button onclick="submitProxy()" class="btn-primary text-xs">Save Proxy</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="importModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="pie-card p-6 max-w-lg w-full space-y-4 border border-[#1c2333]">
+      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+        <h3 class="text-lg font-bold text-white">Import Proxies via TXT</h3>
+        <button onclick="closeModal('importModal')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <label class="block font-semibold text-slate-300">Paste proxy list (one per line format: <code>ip:port:user:pass</code>):</label>
+        <textarea id="importText" rows="6" placeholder="142.93.18.22:1080:user:pass&#10;178.62.204.11:1080" class="pie-input w-full font-mono text-cyan-300"></textarea>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="closeModal('importModal')" class="btn-secondary text-xs">Cancel</button>
+        <button onclick="submitImport()" class="btn-primary text-xs">Import All</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('proxies');
+      renderInstanceBar();
+      renderProxiesTable();
+    });
+
+    function renderProxiesTable() {
+      const tbody = document.getElementById('prxTableBody');
+      if (state.proxies.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-4 py-12 text-center text-slate-500 font-mono">
+              <p class="text-sm text-slate-400 font-semibold mb-1">No proxies configured yet</p>
+              <p class="text-xs">Click <strong>"Add Proxy"</strong> or <strong>"Import TXT"</strong> to add SOCKS5/HTTP proxy nodes.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = state.proxies.map(p => `
+        <tr class="hover:bg-slate-900/40 transition-colors">
+          <td class="px-4 py-3 font-bold text-white">${p.name}</td>
+          <td class="px-4 py-3"><span class="badge-diamond">${p.type}</span></td>
+          <td class="px-4 py-3 text-slate-300 font-mono">${p.host}:${p.port}</td>
+          <td class="px-4 py-3 text-slate-400">${p.auth}</td>
+          <td class="px-4 py-3 text-cyan-400 font-semibold">${p.latency}</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="removeProxyPrompt('${p.id}', '${p.name}')" class="text-red-400 hover:text-red-300 text-xs">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function submitProxy() {
+      const name = document.getElementById('modalPrxName').value.trim() || 'Proxy Node';
+      const type = document.getElementById('modalPrxType').value;
+      const host = document.getElementById('modalPrxHost').value.trim() || '127.0.0.1';
+      const port = parseInt(document.getElementById('modalPrxPort').value) || 1080;
+
+      window.updatePieState(s => {
+        s.proxies.push({ id: String(Date.now()), name, type, host, port, auth: 'None', latency: '35ms' });
+      });
+      closeModal('addPrxModal');
+      renderProxiesTable();
+    }
+
+    function submitImport() {
+      const lines = document.getElementById('importText').value.trim().split('\n');
+      lines.forEach((line, idx) => {
+        if (line.trim()) {
+          const parts = line.trim().split(':');
+          window.updatePieState(s => {
+            s.proxies.push({
+              id: String(Date.now() + idx),
+              name: 'Imported #' + (s.proxies.length + 1),
+              type: 'SOCKS5',
+              host: parts[0],
+              port: parseInt(parts[1]) || 1080,
+              auth: parts[2] ? `${parts[2]}:${parts[3] || ''}` : 'None',
+              latency: '40ms'
+            });
+          });
+        }
+      });
+      closeModal('importModal');
+      renderProxiesTable();
+    }
+
+    function removeProxyPrompt(id, name) {
+      window.showConfirmModal({
+        title: `Remove ${name}?`,
+        message: `Are you sure you want to remove <strong>${name}</strong> from your proxy pool?`,
+        confirmText: 'Remove Proxy',
+        cancelText: 'Cancel',
+        isDanger: true,
+        onConfirm: () => {
+          window.updatePieState(s => {
+            s.proxies = s.proxies.filter(x => x.id !== id);
+          });
+          renderProxiesTable();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

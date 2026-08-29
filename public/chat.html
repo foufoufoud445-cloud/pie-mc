@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Interactive Terminal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 flex flex-col h-[78vh]">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#1c2333] gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="w-8 h-8 rounded-lg bg-[#2cf5d6]/10 border border-[#2cf5d6]/30 flex items-center justify-center text-[#2cf5d6]">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+              <span>Instance Terminal</span>
+              <span id="chatActiveInstanceBadge" class="badge-diamond font-mono text-[11px]">Instance 1</span>
+            </h2>
+            <p class="text-xs text-slate-400 font-mono">Isolated console feed for active bot</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-2 flex-wrap">
+          <!-- Command Shortcuts -->
+          <button onclick="insertCmd('/spawn')" class="btn-secondary text-xs px-2.5 py-1 font-mono text-cyan-300">/spawn</button>
+          <button onclick="insertCmd('/help')" class="btn-secondary text-xs px-2.5 py-1 font-mono text-cyan-300">/help</button>
+          <button onclick="insertCmd('/list')" class="btn-secondary text-xs px-2.5 py-1 font-mono text-cyan-300">/list</button>
+          <button onclick="insertCmd('/tpa ')" class="btn-secondary text-xs px-2.5 py-1 font-mono text-cyan-300">/tpa</button>
+          <button onclick="clearConsole()" class="btn-secondary text-xs px-3 py-1 text-red-400">Clear</button>
+        </div>
+      </div>
+
+      <!-- Scrollable Console Output -->
+      <div id="fullConsoleStream" class="flex-1 overflow-y-auto bg-black/85 rounded-xl p-4 my-4 font-mono text-xs space-y-2 border border-[#1c2333]">
+      </div>
+
+      <!-- Transmission Bar -->
+      <form onsubmit="handleSend(event)" class="flex items-center space-x-3 pt-2">
+        <input id="chatInput" type="text" placeholder="Type a chat message or Minecraft command..." class="pie-input flex-1 font-mono text-sm">
+        <button type="submit" class="btn-primary px-6">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+          <span>Transmit</span>
+        </button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('chat');
+      renderInstanceBar();
+      renderChat();
+    });
+
+    function renderChat() {
+      const c = document.getElementById('fullConsoleStream');
+      const curInstId = state.activeInstanceId || 1;
+      const inst = state.instances.find(i => i.id === curInstId) || state.instances[0];
+
+      document.getElementById('chatActiveInstanceBadge').innerText = inst.name;
+
+      const filtered = state.chatLogs.filter(m => m.instanceId === curInstId);
+
+      if (filtered.length === 0) {
+        c.innerHTML = `<div class="text-slate-500 font-mono text-center py-12">No console messages recorded for ${inst.name}.</div>`;
+        return;
+      }
+
+      c.innerHTML = filtered.map(m => `
+        <div class="flex items-start space-x-2">
+          <span class="text-slate-600">[${m.time}]</span>
+          <span class="${m.type === 'bot' ? 'text-emerald-400 font-bold' : (m.type === 'system' ? 'text-cyan-400 font-bold' : 'text-slate-300')}">${m.tag} ${m.player}:</span>
+          <span class="text-slate-200">${m.msg}</span>
+        </div>
+      `).join('');
+      c.scrollTop = c.scrollHeight;
+    }
+
+    function handleSend(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatInput');
+      const val = input.value.trim();
+      if (!val) return;
+
+      const now = new Date().toTimeString().split(' ')[0];
+      const inst = state.instances.find(i => i.id === state.activeInstanceId) || state.instances[0];
+
+      window.updatePieState(s => {
+        s.chatLogs.push({ 
+          id: 'c_' + Date.now(),
+          instanceId: inst.id,
+          time: now, 
+          player: inst.account, 
+          tag: '[BOT]', 
+          msg: val, 
+          type: 'bot' 
+        });
+      });
+
+      renderChat();
+      input.value = '';
+    }
+
+    function insertCmd(cmd) {
+      const input = document.getElementById('chatInput');
+      input.value = cmd;
+      input.focus();
+    }
+
+    function clearConsole() {
+      const curInstId = state.activeInstanceId || 1;
+      window.updatePieState(s => {
+        s.chatLogs = s.chatLogs.filter(m => m.instanceId !== curInstId);
+      });
+      renderChat();
+    }
+  </script>
+</body>
+</html>

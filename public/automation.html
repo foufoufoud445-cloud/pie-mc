@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Scheduled Automation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">Scheduled Automations</h2>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Periodic message broadcasts & routine commands assigned to instances</p>
+        </div>
+        
+        <!-- Controls: Master Toggle All & New Automation Button -->
+        <div class="flex items-center space-x-3">
+          <button id="btnMasterToggle" onclick="toggleAllAutomationsMaster()" class="btn-secondary text-xs px-3 py-2">
+            <span id="masterToggleText">Disable All</span>
+          </button>
+          <button onclick="openNewAutoModal()" class="btn-primary text-xs">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            <span>New Automation</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Automations Table -->
+      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
+            <tr>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Message / Command</th>
+              <th class="px-4 py-3">Interval</th>
+              <th class="px-4 py-3">Target Instances</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="autoTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Automation Modal (Multi-Instance Selection) -->
+  <div id="addAutoModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="pie-card p-6 max-w-lg w-full space-y-4 border border-[#1c2333] shadow-2xl">
+      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+        <h3 class="text-lg font-bold text-white">Create Scheduled Task</h3>
+        <button onclick="closeModal('addAutoModal')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Message / Command to Broadcast</label>
+          <input id="modalAutoMsg" type="text" placeholder="e.g. /clan broadcast We are recruiting!" class="pie-input w-full font-mono text-white">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Interval Duration</label>
+            <input id="modalAutoInterval" type="number" value="60" class="pie-input w-full font-mono">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Time Unit</label>
+            <select id="modalAutoUnit" class="pie-select w-full">
+              <option value="seconds">Seconds</option>
+              <option value="minutes">Minutes</option>
+              <option value="hours">Hours</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Multi-Instance Target Checkboxes -->
+        <div class="p-3 rounded-xl bg-[#0a0d14] border border-[#1c2333] space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-slate-300 block">Select Target Instances (Multiple)</label>
+            <button type="button" onclick="selectAllInstancesCheckbox()" class="text-[#2cf5d6] text-[11px] hover:underline">Select All</button>
+          </div>
+          <div id="instanceCheckboxesList" class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="closeModal('addAutoModal')" class="btn-secondary text-xs">Cancel</button>
+        <button onclick="submitAuto()" class="btn-primary text-xs">Save Automation</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('automation');
+      renderInstanceBar();
+      renderAutoTable();
+    });
+
+    function renderAutoTable() {
+      const tbody = document.getElementById('autoTableBody');
+      const allActive = state.automations.length > 0 && state.automations.every(a => a.status);
+      document.getElementById('masterToggleText').innerText = allActive ? 'Disable All' : 'Enable All';
+
+      tbody.innerHTML = state.automations.map(au => {
+        let targetsText = 'All Instances';
+        if (Array.isArray(au.targetInstances) && !au.targetInstances.includes('all')) {
+          targetsText = au.targetInstances.map(id => `Instance ${id}`).join(', ');
+        }
+
+        return `
+          <tr class="hover:bg-slate-900/40 transition-colors">
+            <td class="px-4 py-3">
+              <button onclick="toggleAuto('${au.id}')" class="${au.status ? 'badge-online' : 'badge-offline'}">
+                ${au.status ? 'ACTIVE' : 'PAUSED'}
+              </button>
+            </td>
+            <td class="px-4 py-3 font-semibold text-white font-mono">${au.msg}</td>
+            <td class="px-4 py-3 text-cyan-300 font-mono">${au.interval}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded bg-[#2cf5d6]/10 text-[#2cf5d6] border border-[#2cf5d6]/30 text-[11px] font-mono font-bold">
+                ${targetsText}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="removeAutoPrompt('${au.id}', '${au.msg}')" class="btn-secondary text-xs px-2.5 py-1 text-red-400 hover:text-red-300">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function toggleAuto(id) {
+      window.updatePieState(s => {
+        const item = s.automations.find(x => x.id === id);
+        if (item) item.status = !item.status;
+      });
+      renderAutoTable();
+    }
+
+    function toggleAllAutomationsMaster() {
+      const allActive = state.automations.every(a => a.status);
+      const newStatus = !allActive;
+
+      window.updatePieState(s => {
+        s.automations.forEach(a => a.status = newStatus);
+      });
+      renderAutoTable();
+    }
+
+    function openNewAutoModal() {
+      // Build checkboxes for all existing instances
+      const container = document.getElementById('instanceCheckboxesList');
+      container.innerHTML = `
+        <label class="flex items-center space-x-2 p-2 rounded bg-slate-900 border border-[#1c2333] cursor-pointer">
+          <input type="checkbox" id="chk_all" value="all" checked onchange="handleAllCheckboxChange(this.checked)" class="w-4 h-4 rounded text-[#2cf5d6]">
+          <span class="text-xs font-bold text-white">All Instances</span>
+        </label>
+      ` + state.instances.map(inst => `
+        <label class="flex items-center space-x-2 p-2 rounded bg-slate-900 border border-[#1c2333] cursor-pointer">
+          <input type="checkbox" class="inst-chk w-4 h-4 rounded text-[#2cf5d6]" value="${inst.id}">
+          <span class="text-xs font-semibold text-slate-300">${inst.name}</span>
+        </label>
+      `).join('');
+
+      openModal('addAutoModal');
+    }
+
+    function handleAllCheckboxChange(checked) {
+      if (checked) {
+        document.querySelectorAll('.inst-chk').forEach(c => c.checked = false);
+      }
+    }
+
+    function selectAllInstancesCheckbox() {
+      document.getElementById('chk_all').checked = true;
+      document.querySelectorAll('.inst-chk').forEach(c => c.checked = false);
+    }
+
+    function submitAuto() {
+      const msg = document.getElementById('modalAutoMsg').value.trim() || '/help';
+      const interval = document.getElementById('modalAutoInterval').value + ' ' + document.getElementById('modalAutoUnit').value;
+
+      let targets = [];
+      const chkAll = document.getElementById('chk_all');
+      if (chkAll && chkAll.checked) {
+        targets = ['all'];
+      } else {
+        document.querySelectorAll('.inst-chk:checked').forEach(c => {
+          targets.push(parseInt(c.value));
+        });
+      }
+
+      if (targets.length === 0) targets = ['all'];
+
+      window.updatePieState(s => {
+        s.automations.push({
+          id: String(Date.now()),
+          msg,
+          interval,
+          status: true,
+          targetInstances: targets
+        });
+      });
+
+      closeModal('addAutoModal');
+      renderAutoTable();
+    }
+
+    function removeAutoPrompt(id, msg) {
+      window.showConfirmModal({
+        title: 'Delete Automation Task?',
+        message: `Are you sure you want to delete the scheduled task <code>${msg}</code>?`,
+        confirmText: 'Delete Task',
+        cancelText: 'Cancel',
+        isDanger: true,
+        onConfirm: () => {
+          window.updatePieState(s => {
+            s.automations = s.automations.filter(x => x.id !== id);
+          });
+          renderAutoTable();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

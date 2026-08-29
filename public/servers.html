@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Minecraft Servers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">Target Minecraft Servers</h2>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Manage server IP endpoints and ports</p>
+        </div>
+        <button onclick="openModal('addSrvModal')" class="btn-primary">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Add Server</span>
+        </button>
+      </div>
+
+      <div id="serversGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      </div>
+    </div>
+  </main>
+
+  <!-- Add Server Modal -->
+  <div id="addSrvModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="pie-card p-6 max-w-md w-full space-y-4 border border-[#1c2333]">
+      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+        <h3 class="text-lg font-bold text-white">Add Minecraft Server</h3>
+        <button onclick="closeModal('addSrvModal')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Server Name</label>
+          <input id="modalSrvName" type="text" placeholder="e.g. Hypixel Network" class="pie-input w-full">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Host / Domain</label>
+          <input id="modalSrvHost" type="text" placeholder="e.g. mc.hypixel.net" class="pie-input w-full font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Port</label>
+          <input id="modalSrvPort" type="number" value="25565" class="pie-input w-full font-mono">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="closeModal('addSrvModal')" class="btn-secondary text-xs">Cancel</button>
+        <button onclick="submitServer()" class="btn-primary text-xs">Save Server</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('servers');
+      renderInstanceBar();
+      renderServersGrid();
+    });
+
+    function renderServersGrid() {
+      const grid = document.getElementById('serversGrid');
+      if (state.servers.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full pie-card-inner p-12 text-center text-slate-500 font-mono">
+            <p class="text-sm text-slate-400 font-semibold mb-1">No Minecraft servers added yet</p>
+            <p class="text-xs">Click <strong>"Add Server"</strong> to add your first server hostname and port.</p>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = state.servers.map(s => `
+        <div class="pie-card-inner p-4 space-y-3 border border-[#1c2333]">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-white text-base">${s.name}</h4>
+            <span class="badge-online text-[10px]">ONLINE</span>
+          </div>
+          <div class="text-xs font-mono text-slate-400 space-y-1">
+            <div>Address: <span class="text-slate-200 font-semibold">${s.host}:${s.port}</span></div>
+            <div>Latency: <span class="text-cyan-400 font-bold">${s.ping || '24ms'}</span></div>
+          </div>
+          <div class="flex items-center justify-end space-x-2 pt-2 border-t border-[#1c2333]">
+            <button onclick="removeServerPrompt('${s.id}', '${s.name}')" class="text-red-400 hover:text-red-300 text-xs font-semibold">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function submitServer() {
+      const name = document.getElementById('modalSrvName').value.trim() || 'Custom MC Server';
+      const host = document.getElementById('modalSrvHost').value.trim() || '127.0.0.1';
+      const port = parseInt(document.getElementById('modalSrvPort').value) || 25565;
+
+      window.updatePieState(s => {
+        s.servers.push({ id: String(Date.now()), name, host, port, ping: '24ms', status: 'online' });
+        
+        const inst = s.instances.find(i => i.id === s.activeInstanceId);
+        if (inst && !inst.server) {
+          inst.server = name;
+        }
+      });
+      closeModal('addSrvModal');
+      renderServersGrid();
+    }
+
+    function removeServerPrompt(id, name) {
+      window.showConfirmModal({
+        title: `Delete ${name}?`,
+        message: `Are you sure you want to remove <strong>${name}</strong> from your server list?`,
+        confirmText: 'Delete Server',
+        cancelText: 'Cancel',
+        isDanger: true,
+        onConfirm: () => {
+          window.updatePieState(s => {
+            s.servers = s.servers.filter(x => x.id !== id);
+          });
+          renderServersGrid();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

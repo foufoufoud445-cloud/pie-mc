@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Audit Logs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-3">
+            <h2 class="text-xl font-black text-white">48-Hour Activity & System Logs</h2>
+            <span class="badge-diamond text-xs font-mono">48H WINDOW</span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Filter historical telemetry, connects, and trigger executions by instance</p>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex items-center space-x-3 flex-wrap">
+          <!-- Instance Selector -->
+          <select id="logInstanceSelect" onchange="filterLogs()" class="pie-select text-xs py-1.5 px-3">
+            <option value="all">All Instances</option>
+          </select>
+
+          <!-- Search Input -->
+          <input id="logSearch" oninput="filterLogs()" type="text" placeholder="Search event or player..." class="pie-input text-xs w-44">
+          
+          <button onclick="clearLogsPrompt()" class="btn-secondary text-xs px-3 py-1.5 text-red-400">Clear Logs</button>
+        </div>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
+            <tr>
+              <th class="px-4 py-3">Date / Timestamp</th>
+              <th class="px-4 py-3">Instance</th>
+              <th class="px-4 py-3">Event Type</th>
+              <th class="px-4 py-3">Player / Target</th>
+              <th class="px-4 py-3">Event Details</th>
+            </tr>
+          </thead>
+          <tbody id="logsTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('logs');
+      renderInstanceBar();
+      populateInstanceFilter();
+      filterLogs();
+    });
+
+    function populateInstanceFilter() {
+      const select = document.getElementById('logInstanceSelect');
+      select.innerHTML = `<option value="all">All Instances</option>` + state.instances.map(inst => `
+        <option value="${inst.id}" ${state.activeInstanceId === inst.id ? 'selected' : ''}>${inst.name}</option>
+      `).join('');
+    }
+
+    function filterLogs() {
+      const instFilter = document.getElementById('logInstanceSelect').value;
+      const q = document.getElementById('logSearch').value.toLowerCase();
+
+      const filtered = state.logs.filter(l => {
+        const matchesInst = (instFilter === 'all' || l.instanceId === parseInt(instFilter));
+        const matchesQuery = !q || 
+          l.player.toLowerCase().includes(q) || 
+          l.event.toLowerCase().includes(q) || 
+          l.details.toLowerCase().includes(q);
+        return matchesInst && matchesQuery;
+      });
+
+      renderLogsTable(filtered);
+    }
+
+    function renderLogsTable(logList) {
+      const tbody = document.getElementById('logsTableBody');
+      if (logList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-slate-500 font-mono">No logs recorded within the last 48 hours for the chosen filter.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = logList.map(l => `
+        <tr class="hover:bg-slate-900/40 transition-colors">
+          <td class="px-4 py-3 text-slate-400 font-mono">
+            <span class="text-slate-500">${l.date || ''}</span>
+            <strong class="text-slate-300 ml-1">${l.time}</strong>
+          </td>
+          <td class="px-4 py-3 text-[#2cf5d6] font-bold">${l.instanceName || ('Instance ' + l.instanceId)}</td>
+          <td class="px-4 py-3"><span class="badge-diamond">${l.event}</span></td>
+          <td class="px-4 py-3 text-white font-bold">${l.player}</td>
+          <td class="px-4 py-3 text-slate-300">${l.details}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearLogsPrompt() {
+      window.showConfirmModal({
+        title: 'Clear 48-Hour Logs?',
+        message: 'Are you sure you want to clear the activity log history?',
+        confirmText: 'Clear Logs',
+        cancelText: 'Cancel',
+        isDanger: true,
+        onConfirm: () => {
+          window.updatePieState(s => s.logs = []);
+          filterLogs();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

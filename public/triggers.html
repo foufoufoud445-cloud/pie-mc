@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Reactive Triggers</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-black text-white">Reactive Chat Triggers</h2>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Auto-respond to keywords, player mentions, and server triggers</p>
+        </div>
+        <button onclick="openModal('addTrgModal')" class="btn-primary text-xs">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>New Trigger</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-[#1c2333]">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
+            <tr>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Trigger Name</th>
+              <th class="px-4 py-3">Keyword Match</th>
+              <th class="px-4 py-3">Reply Action</th>
+              <th class="px-4 py-3">Cooldown</th>
+              <th class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="trgTableBody" class="divide-y divide-[#1c2333]/80 bg-[#090b10] font-mono text-xs">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <div id="addTrgModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="pie-card p-6 max-w-lg w-full space-y-4 border border-[#1c2333]">
+      <div class="flex items-center justify-between border-b border-[#1c2333] pb-3">
+        <h3 class="text-lg font-bold text-white">Create Reactive Trigger</h3>
+        <button onclick="closeModal('addTrgModal')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Trigger Name</label>
+            <input id="modalTrgName" type="text" placeholder="e.g. Greeter" class="pie-input w-full">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Keyword</label>
+            <input id="modalTrgKeyword" type="text" placeholder="e.g. hello or !help" class="pie-input w-full font-mono">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Match Mode</label>
+            <select id="modalTrgMode" class="pie-select w-full">
+              <option value="Keyword anywhere">Keyword anywhere</option>
+              <option value="Exact match">Exact match</option>
+              <option value="Starts with">Starts with</option>
+              <option value="Regex">Regex Pattern</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Cooldown (Seconds)</label>
+            <input id="modalTrgCooldown" type="number" value="10" class="pie-input w-full">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Reply Message / Command</label>
+          <input id="modalTrgReply" type="text" placeholder="e.g. Welcome {player}! Type !discord for info" class="pie-input w-full font-mono text-cyan-300">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end space-x-3 pt-2">
+        <button onclick="closeModal('addTrgModal')" class="btn-secondary text-xs">Cancel</button>
+        <button onclick="submitTrigger()" class="btn-primary text-xs">Create Trigger</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('triggers');
+      renderInstanceBar();
+      renderTrgTable();
+    });
+
+    function renderTrgTable() {
+      const tbody = document.getElementById('trgTableBody');
+      tbody.innerHTML = state.triggers.map(tr => `
+        <tr class="hover:bg-slate-900/40 transition-colors">
+          <td class="px-4 py-3">
+            <button onclick="toggleTrg('${tr.id}')" class="${tr.status ? 'badge-online' : 'badge-offline'}">
+              ${tr.status ? 'ENABLED' : 'DISABLED'}
+            </button>
+          </td>
+          <td class="px-4 py-3 font-bold text-white">${tr.name}</td>
+          <td class="px-4 py-3 text-[#2cf5d6]"><code>${tr.keyword}</code> (${tr.mode})</td>
+          <td class="px-4 py-3 text-slate-300">${tr.reply}</td>
+          <td class="px-4 py-3 text-slate-400">${tr.cooldown}s</td>
+          <td class="px-4 py-3 text-right">
+            <button onclick="removeTrgPrompt('${tr.id}', '${tr.name}')" class="text-red-400 hover:text-red-300 text-xs">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleTrg(id) {
+      window.updatePieState(s => {
+        const item = s.triggers.find(x => x.id === id);
+        if (item) item.status = !item.status;
+      });
+      renderTrgTable();
+    }
+
+    function submitTrigger() {
+      const name = document.getElementById('modalTrgName').value.trim() || 'Trigger';
+      const keyword = document.getElementById('modalTrgKeyword').value.trim() || '!test';
+      const mode = document.getElementById('modalTrgMode').value;
+      const cooldown = parseInt(document.getElementById('modalTrgCooldown').value) || 10;
+      const reply = document.getElementById('modalTrgReply').value.trim() || 'Auto response';
+
+      window.updatePieState(s => {
+        s.triggers.push({ id: String(Date.now()), name, keyword, mode, cooldown, reply, status: true });
+      });
+      closeModal('addTrgModal');
+      renderTrgTable();
+    }
+
+    function removeTrgPrompt(id, name) {
+      window.showConfirmModal({
+        title: `Delete Trigger ${name}?`,
+        message: `Are you sure you want to delete trigger rule <strong>${name}</strong>?`,
+        confirmText: 'Delete Trigger',
+        cancelText: 'Cancel',
+        isDanger: true,
+        onConfirm: () => {
+          window.updatePieState(s => {
+            s.triggers = s.triggers.filter(x => x.id !== id);
+          });
+          renderTrgTable();
+        }
+      });
+    }
+  </script>
+</body>
+</html>

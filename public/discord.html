@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Discord Bridge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="pie-card p-6 space-y-4">
+        <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+          <span>Discord Webhook Relay</span>
+        </h2>
+        <p class="text-xs text-slate-400">Forward Minecraft whispers and alerts straight to your Discord channel.</p>
+
+        <div class="space-y-3 pt-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-300">Webhook URL</label>
+            <input type="text" id="discordWebhookInput" value="https://discord.com/api/webhooks/123/abc..." class="pie-input w-full font-mono text-xs mt-1">
+          </div>
+
+          <div class="space-y-2 pt-2">
+            <label class="flex items-center space-x-2 text-xs text-slate-300">
+              <input type="checkbox" checked class="rounded bg-slate-800 text-[#2cf5d6]">
+              <span>Direct Whispers & PMs</span>
+            </label>
+            <label class="flex items-center space-x-2 text-xs text-slate-300">
+              <input type="checkbox" checked class="rounded bg-slate-800 text-[#2cf5d6]">
+              <span>Player Mentions & Alerts</span>
+            </label>
+            <label class="flex items-center space-x-2 text-xs text-slate-300">
+              <input type="checkbox" checked class="rounded bg-slate-800 text-[#2cf5d6]">
+              <span>Bot Disconnect & Reconnect Notices</span>
+            </label>
+          </div>
+
+          <button onclick="saveDiscord()" class="btn-primary w-full text-xs py-2.5">Save Discord Bridge</button>
+        </div>
+      </div>
+
+      <div class="pie-card p-6 lg:col-span-2 space-y-4 flex flex-col h-[520px]">
+        <div class="flex items-center justify-between pb-3 border-b border-[#1c2333]">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
+              #
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-white">#mc-bot-relay (Live Feed)</h3>
+              <span class="badge-online">WEBHOOK ACTIVE</span>
+            </div>
+          </div>
+          <button onclick="clearRelay()" class="btn-secondary text-xs px-2 py-1">Clear Feed</button>
+        </div>
+
+        <div id="discordRelayList" class="flex-1 overflow-y-auto bg-[#090b10] rounded-xl p-4 font-mono text-xs space-y-3 border border-[#1c2333]">
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('discord');
+      renderInstanceBar();
+      renderDiscord();
+    });
+
+    function renderDiscord() {
+      const feed = document.getElementById('discordRelayList');
+      feed.innerHTML = state.discordRelay.map(d => `
+        <div class="p-3 rounded-lg bg-[#0c1018] border border-[#1c2333]">
+          <div class="flex items-center justify-between text-[10px] text-slate-500 mb-1">
+            <span class="font-bold text-indigo-400">${d.author}</span>
+            <span>${d.time}</span>
+          </div>
+          <p class="text-slate-200">${d.content}</p>
+        </div>
+      `).join('');
+    }
+
+    function saveDiscord() {
+      alert('Discord webhook configuration saved successfully!');
+    }
+
+    function clearRelay() {
+      window.updatePieState(s => s.discordRelay = []);
+      renderDiscord();
+    }
+  </script>
+</body>
+</html>

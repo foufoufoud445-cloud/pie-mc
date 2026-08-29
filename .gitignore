@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.local
+.env.production
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/data/
+*.key
+*.exe
+*.log
+.DS_Store
+Thumbs.db

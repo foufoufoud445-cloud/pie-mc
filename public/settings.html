@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pie MC — Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="shared.js"></script>
+</head>
+<body>
+  <div id="header-mount"></div>
+  <div id="instance-bar-mount"></div>
+
+  <main class="flex-1 p-6 max-w-4xl w-full mx-auto space-y-6">
+    <div class="pie-card p-6 space-y-6">
+      <div class="flex items-center justify-between pb-4 border-b border-[#1c2333]">
+        <div>
+          <h2 class="text-xl font-black text-white">Pie MC System Settings</h2>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Connection policies, 48-hour log cleanups, and security keys</p>
+        </div>
+      </div>
+
+      <div class="space-y-6 text-sm">
+        <!-- 48-HOUR LOG CLEANUP SECTION -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-[#2cf5d6] font-mono">Log Retention & Maintenance</h3>
+          
+          <div class="p-4 rounded-xl pie-card-inner border border-[#1c2333] space-y-3">
+            <label class="flex items-center justify-between cursor-pointer">
+              <div>
+                <span class="font-bold text-white block">48-Hour Log Auto-Cleanup</span>
+                <span class="text-xs text-slate-400">Automatically prune activity and audit logs older than 48 hours to maintain fast performance.</span>
+              </div>
+              <input type="checkbox" id="chkAutoCleanup48h" checked class="w-5 h-5 rounded text-[#2cf5d6]">
+            </label>
+
+            <div class="pt-2 border-t border-[#1c2333] flex items-center justify-between">
+              <span class="text-xs text-slate-400 font-mono">Purge history older than 48 hours manually:</span>
+              <button onclick="runManual48hCleanup()" class="btn-secondary text-xs px-3 py-1.5 text-amber-400 border-amber-500/30">
+                <span>Clean Up Logs > 48h Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Policies -->
+        <div class="space-y-3 pt-4 border-t border-[#1c2333]">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-[#2cf5d6] font-mono">Connection Policies</h3>
+          
+          <label class="flex items-center justify-between p-4 rounded-xl pie-card-inner border border-[#1c2333] cursor-pointer">
+            <div>
+              <span class="font-bold text-white block">Auto-Reconnect on Disconnect</span>
+              <span class="text-xs text-slate-400">Automatically re-establish connection after kicks or server restarts</span>
+            </div>
+            <input type="checkbox" id="userAutoReconnect" checked class="w-5 h-5 rounded text-[#2cf5d6]">
+          </label>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-300">Retry Delay (Seconds)</label>
+              <input type="number" value="10" class="pie-input w-full font-mono">
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-semibold text-slate-300">Max Retry Attempts</label>
+              <input type="number" value="5" class="pie-input w-full font-mono">
+            </div>
+          </div>
+        </div>
+
+        <!-- Minecraft Protocol Version -->
+        <div class="space-y-3 pt-4 border-t border-[#1c2333]">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#2cf5d6] font-mono">Minecraft Protocol Version</h3>
+            <span id="versionLockNotice" class="hidden px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/15 text-amber-400 border border-amber-500/30">LOCKED BY ADMIN</span>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-300">Target Version Protocol</label>
+            <select id="userVersionSelect" class="pie-select w-full font-mono">
+              <option value="1.21.1">1.21.1 / 1.21.11 (Latest)</option>
+              <option value="1.20.4">1.20.4</option>
+              <option value="1.19.4">1.19.4</option>
+              <option value="1.16.5">1.16.5</option>
+              <option value="1.8.9">1.8.9</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- OWNER-ONLY SECURITY & BEARER API KEY SECTION -->
+        <div id="ownerSecuritySection" class="hidden space-y-3 pt-4 border-t border-[#1c2333]">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-[#2cf5d6] font-mono">Backend API Security (Owner Only)</h3>
+            <span class="badge-diamond text-[10px] font-mono">RESTRICTED TO OWNER</span>
+          </div>
+          
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-300">Backend API Key (Bearer Token)</label>
+            <input type="text" id="ownerApiKeyInput" value="pie_mc_live_89437b02c89f4172" class="pie-input w-full font-mono text-[#2cf5d6]">
+          </div>
+        </div>
+
+        <div class="pt-4 flex justify-end">
+          <button onclick="saveUserSettings()" class="btn-primary">Save Preferences</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGlobalHeader('settings');
+      renderInstanceBar();
+      loadUserSettings();
+    });
+
+    function loadUserSettings() {
+      const user = getCurrentUser();
+      const flags = getPlatformFlags();
+
+      document.getElementById('chkAutoCleanup48h').checked = (flags.autoCleanup48h !== false);
+
+      if (user && (user.isOwner || user.id === OWNER_DISCORD_ID)) {
+        document.getElementById('ownerSecuritySection').classList.remove('hidden');
+      }
+
+      if (!flags.allowUserChangeVersion && (!user || (!user.isOwner && user.id !== OWNER_DISCORD_ID))) {
+        const vSelect = document.getElementById('userVersionSelect');
+        vSelect.value = flags.lockedVersion || '1.21.1';
+        vSelect.disabled = true;
+        document.getElementById('versionLockNotice').classList.remove('hidden');
+      }
+    }
+
+    function runManual48hCleanup() {
+      const flags = getPlatformFlags();
+      const cutoff = Date.now() - (48 * 3600 * 1000);
+      
+      window.updatePieState(s => {
+        const before = s.logs.length;
+        s.logs = s.logs.filter(l => l.timestamp && l.timestamp >= cutoff);
+        alert(`Cleanup complete! Purged logs older than 48 hours.`);
+      });
+    }
+
+    function saveUserSettings() {
+      const flags = getPlatformFlags();
+      flags.autoCleanup48h = document.getElementById('chkAutoCleanup48h').checked;
+      savePlatformFlags(flags);
+      alert('Settings saved successfully!');
+    }
+  </script>
+</body>
+</html>
