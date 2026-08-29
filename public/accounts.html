@@ -42,10 +42,11 @@
           <thead class="bg-[#0c1018] text-xs uppercase font-mono text-slate-400 border-b border-[#1c2333]">
             <tr>
               <th class="px-4 py-3">Avatar</th>
-              <th class="px-4 py-3">Username (Mojang Verified)</th>
-              <th class="px-4 py-3">Player UUID</th>
-              <th class="px-4 py-3">Session Status</th>
-              <th class="px-4 py-3">Linked Date</th>
+              <th class="px-4 py-3">Username</th>
+              <th class="px-4 py-3">UUID</th>
+              <th class="px-4 py-3">Type</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">Linked</th>
               <th class="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -150,22 +151,23 @@
       }
 
       tbody.innerHTML = state.accounts.map(a => {
-        let badgeHtml = `<span class="badge-online">AUTHENTICATED</span>`;
+        let statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">ACTIVE</span>`;
         if (a.status === 'needs_reauth' || a.tokenExpiryStatus === 'needs_reauth') {
-          badgeHtml = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">NEEDS RE-AUTH</span>`;
+          statusBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">NEEDS RE-AUTH</span>`;
         }
 
         return `
           <tr class="hover:bg-slate-900/40 transition-colors">
             <td class="px-4 py-3">
               <div class="w-8 h-8 rounded bg-slate-800 border border-[#1c2333] overflow-hidden flex items-center justify-center">
-                <img src="https://mc-heads.net/avatar/${a.username}/28" alt="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'28\' height=\'28\' fill=\'%232cf5d6\'><rect width=\'28\' height=\'28\' fill=\'%231e293b\'/></svg>'">
+                <img src="https://mc-heads.net/avatar/${a.username}/28" alt="" onerror="this.style.display='none'">
               </div>
             </td>
             <td class="px-4 py-3 font-bold text-white">${a.username}</td>
-            <td class="px-4 py-3 text-slate-400 font-mono">${a.uuid}</td>
-            <td class="px-4 py-3">${badgeHtml}</td>
-            <td class="px-4 py-3 text-slate-500">${a.added}</td>
+            <td class="px-4 py-3 text-slate-400 font-mono text-[11px]">${a.uuid}</td>
+            <td class="px-4 py-3"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PREMIUM</span></td>
+            <td class="px-4 py-3">${statusBadge}</td>
+            <td class="px-4 py-3 text-slate-500 text-[11px]">${a.added}</td>
             <td class="px-4 py-3 text-right space-x-2">
               <button onclick="openReauthModal('${a.id}', '${a.username}')" class="btn-secondary text-xs px-2.5 py-1 text-amber-400 hover:text-amber-300" title="Refresh Token">
                 Re-Auth
@@ -179,6 +181,8 @@
       }).join('');
     }
 
+    let pendingProfile = null;
+
     async function submitAccount() {
       const token = document.getElementById('modalAccToken').value.trim();
       if (!token) {
@@ -187,42 +191,104 @@
       }
 
       const statusBox = document.getElementById('detectStatus');
+      const detectText = document.getElementById('detectText');
       const btn = document.getElementById('btnLinkSubmit');
       statusBox.classList.remove('hidden');
       statusBox.classList.add('flex');
+      detectText.textContent = 'Verifying Bearer token with Mojang services...';
       btn.disabled = true;
 
       try {
         const profile = await window.autoResolveSSID(token);
+        pendingProfile = { ...profile, rawToken: token };
 
-        window.updatePieState(s => {
-          s.accounts.push({
-            id: String(Date.now()),
-            username: profile.username,
-            uuid: profile.uuid,
-            status: 'authenticated',
-            tokenExpiryStatus: 'valid',
-            expiresAt: profile.expiresAt,
-            added: new Date().toISOString().split('T')[0]
-          });
+        // Show verified result
+        detectText.innerHTML = `
+          <div class="flex items-center space-x-3 w-full">
+            <img src="https://mc-heads.net/avatar/${profile.username}/32" class="w-8 h-8 rounded border border-[#2cf5d6]/30" onerror="this.style.display='none'">
+            <div class="flex-1">
+              <div class="flex items-center space-x-2">
+                <span class="text-white font-bold">${profile.username}</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">PREMIUM</span>
+              </div>
+              <p class="text-[10px] text-slate-500 font-mono mt-0.5">UUID: ${profile.uuid}</p>
+            </div>
+            <button onclick="confirmAddAccount()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all">
+              + Add Account
+            </button>
+          </div>
+        `;
+        btn.style.display = 'none';
+      } catch (err) {
+        detectText.innerHTML = `
+          <div class="flex items-center space-x-2 w-full">
+            <svg class="w-4 h-4 text-red-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            <div class="flex-1">
+              <span class="text-red-400 font-bold">Verification Failed</span>
+              <p class="text-[10px] text-slate-500 mt-0.5">${err.message}</p>
+            </div>
+          </div>
+        `;
+        btn.style.display = 'none';
+      } finally {
+        // Keep status box visible so user can see result
+      }
+    }
 
-          // If active instance doesn't have an account, assign this newly added account
-          const inst = s.instances.find(i => i.id === s.activeInstanceId);
-          if (inst && !inst.account) {
-            inst.account = profile.username;
-          }
+    async function confirmAddAccount() {
+      if (!pendingProfile) return;
+      const profile = pendingProfile;
+      const token = document.getElementById('modalAccToken').value.trim();
+
+      // Check for duplicates
+      if (state.accounts.some(a => a.uuid === profile.uuid)) {
+        alert('This account is already linked!');
+        return;
+      }
+
+      // Save token to backend (encrypted)
+      try {
+        await fetch('/api/accounts/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ sessionToken: token, username: profile.username, uuid: profile.uuid })
+        });
+      } catch (e) { console.warn('Backend save failed:', e); }
+
+      // Save to local state (with rawToken for bot use)
+      window.updatePieState(s => {
+        s.accounts.push({
+          id: String(Date.now()),
+          username: profile.username,
+          uuid: profile.uuid,
+          rawToken: token,
+          status: 'authenticated',
+          tokenExpiryStatus: 'valid',
+          expiresAt: profile.expiresAt,
+          added: new Date().toISOString().split('T')[0]
         });
 
-        closeModal('linkAccModal');
-        document.getElementById('modalAccToken').value = '';
-        renderAccountsTable();
-      } catch (err) {
-        alert('Verification Failed: ' + err.message);
-      } finally {
-        statusBox.classList.add('hidden');
-        statusBox.classList.remove('flex');
-        btn.disabled = false;
-      }
+        const inst = s.instances.find(i => i.id === s.activeInstanceId);
+        if (inst && !inst.account) {
+          inst.account = profile.username;
+        }
+      });
+
+      pendingProfile = null;
+      closeModal('linkAccModal');
+      document.getElementById('modalAccToken').value = '';
+      resetLinkModal();
+      renderAccountsTable();
+    }
+
+    function resetLinkModal() {
+      const statusBox = document.getElementById('detectStatus');
+      const btn = document.getElementById('btnLinkSubmit');
+      statusBox.classList.add('hidden');
+      statusBox.classList.remove('flex');
+      btn.style.display = '';
+      btn.disabled = false;
+      pendingProfile = null;
     }
 
     function openReauthModal(id, username) {

@@ -20,6 +20,7 @@
       <button onclick="switchTab('users')" id="tab-users" class="tab-btn">Users</button>
       <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn">Activity Logs</button>
       <button onclick="switchTab('userdata')" id="tab-userdata" class="tab-btn">User Data</button>
+      <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn">Settings</button>
     </div>
 
     <!-- Dashboard Tab -->
@@ -96,6 +97,87 @@
         <button onclick="refreshUserData()" class="btn-secondary text-xs">Refresh</button>
       </div>
       <div id="userDataList" class="space-y-3"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="panel-settings" class="tab-panel hidden">
+      <div class="space-y-4">
+        <div class="pie-card p-6 space-y-4">
+          <h2 class="text-lg font-bold text-white">Database Configuration</h2>
+          <p class="text-xs text-slate-400">Configure how Pie MC stores user data, accounts, and server configs.</p>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Storage Mode</label>
+              <select id="cfgDbMode" class="pie-input w-full font-mono text-xs">
+                <option value="sqlite">SQLite (Local Database)</option>
+                <option value="local_json">JSON Files (Flat File Storage)</option>
+                <option value="turso">Turso Cloud (Serverless SQLite)</option>
+              </select>
+              <p class="text-[10px] text-slate-500 mt-1">SQLite is recommended for most setups. Turso for cloud deployments.</p>
+            </div>
+
+            <div id="cfgSqlitePath" class="">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">SQLite Database Path</label>
+              <input id="cfgSqlitePathInput" type="text" class="pie-input w-full font-mono text-xs" placeholder="backend/data/pie-mc.db">
+            </div>
+
+            <div id="cfgJsonPath" class="hidden">
+              <label class="block text-xs font-semibold text-slate-300 mb-1">JSON Store Path</label>
+              <input id="cfgJsonPathInput" type="text" class="pie-input w-full font-mono text-xs" placeholder="backend/data/json_store/">
+            </div>
+
+            <div id="cfgTursoFields" class="hidden space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Turso Database URL</label>
+                <input id="cfgTursoUrl" type="text" class="pie-input w-full font-mono text-xs" placeholder="libsql://your-db.turso.io">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Turso Auth Token</label>
+                <input id="cfgTursoToken" type="password" class="pie-input w-full font-mono text-xs" placeholder="your-turso-auth-token">
+              </div>
+            </div>
+          </div>
+
+          <button onclick="saveDbConfig()" class="btn-primary text-xs">Save Configuration</button>
+        </div>
+
+        <div class="pie-card p-6 space-y-4">
+          <h2 class="text-lg font-bold text-white">Platform Settings</h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Locked Minecraft Version</label>
+              <input id="cfgLockedVersion" type="text" class="pie-input w-full font-mono text-xs" placeholder="1.21.1">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">User Session Duration (hours)</label>
+              <input id="cfgSessionHours" type="number" class="pie-input w-full font-mono text-xs" value="24">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Admin Session Duration (hours)</label>
+              <input id="cfgAdminSessionHours" type="number" class="pie-input w-full font-mono text-xs" value="720">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Token Cleanup Age (hours)</label>
+              <input id="cfgTokenAge" type="number" class="pie-input w-full font-mono text-xs" value="24">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-4 mt-2">
+            <label class="flex items-center space-x-2 text-xs text-slate-300">
+              <input type="checkbox" id="cfgAutoReconnect" class="rounded" checked>
+              <span>Allow Auto-Reconnect</span>
+            </label>
+            <label class="flex items-center space-x-2 text-xs text-slate-300">
+              <input type="checkbox" id="cfgUserAutoLogout" class="rounded" checked>
+              <span>User Auto-Logout</span>
+            </label>
+          </div>
+
+          <button onclick="savePlatformSettings()" class="btn-primary text-xs">Save Settings</button>
+        </div>
+      </div>
     </div>
 
     <!-- Create User Modal -->
@@ -183,6 +265,7 @@
       if (tab === 'users') loadUsers();
       if (tab === 'logs') refreshLogs();
       if (tab === 'userdata') refreshUserData();
+      if (tab === 'settings') loadSettings();
     }
 
     // ─── Dashboard ─────────────────────────────
@@ -442,6 +525,55 @@
           </div>
         `).join('');
       } catch (e) { console.error(e); }
+    }
+
+    // ─── Settings ─────────────────────────────
+    function loadSettings() {
+      const flags = window.getPlatformFlags ? getPlatformFlags() : {};
+      document.getElementById('cfgDbMode').value = flags.databaseMode || 'sqlite';
+      document.getElementById('cfgSqlitePathInput').value = flags.sqlitePath || 'backend/data/pie-mc.db';
+      document.getElementById('cfgJsonPathInput').value = flags.jsonStorePath || 'backend/data/json_store/';
+      document.getElementById('cfgTursoUrl').value = flags.tursoUrl || '';
+      document.getElementById('cfgTursoToken').value = flags.tursoToken || '';
+      document.getElementById('cfgLockedVersion').value = flags.lockedVersion || '1.21.1';
+      document.getElementById('cfgSessionHours').value = flags.userSessionDurationHours || 24;
+      document.getElementById('cfgAdminSessionHours').value = flags.adminSessionDurationHours || 720;
+      document.getElementById('cfgTokenAge').value = flags.userTokenAgeHours || 24;
+      document.getElementById('cfgAutoReconnect').checked = flags.allowAutoReconnect !== false;
+      document.getElementById('cfgUserAutoLogout').checked = flags.userAutoLogoutEnabled !== false;
+      toggleDbFields();
+    }
+
+    function toggleDbFields() {
+      const mode = document.getElementById('cfgDbMode').value;
+      document.getElementById('cfgSqlitePath').classList.toggle('hidden', mode !== 'sqlite');
+      document.getElementById('cfgJsonPath').classList.toggle('hidden', mode !== 'local_json');
+      document.getElementById('cfgTursoFields').classList.toggle('hidden', mode !== 'turso');
+    }
+
+    document.getElementById('cfgDbMode').addEventListener('change', toggleDbFields);
+
+    function saveDbConfig() {
+      const flags = getPlatformFlags();
+      flags.databaseMode = document.getElementById('cfgDbMode').value;
+      flags.sqlitePath = document.getElementById('cfgSqlitePathInput').value;
+      flags.jsonStorePath = document.getElementById('cfgJsonPathInput').value;
+      flags.tursoUrl = document.getElementById('cfgTursoUrl').value;
+      flags.tursoToken = document.getElementById('cfgTursoToken').value;
+      savePlatformFlags(flags);
+      alert('Database configuration saved! Restart the server for changes to take effect.');
+    }
+
+    function savePlatformSettings() {
+      const flags = getPlatformFlags();
+      flags.lockedVersion = document.getElementById('cfgLockedVersion').value;
+      flags.userSessionDurationHours = parseInt(document.getElementById('cfgSessionHours').value) || 24;
+      flags.adminSessionDurationHours = parseInt(document.getElementById('cfgAdminSessionHours').value) || 720;
+      flags.userTokenAgeHours = parseInt(document.getElementById('cfgTokenAge').value) || 24;
+      flags.allowAutoReconnect = document.getElementById('cfgAutoReconnect').checked;
+      flags.userAutoLogoutEnabled = document.getElementById('cfgUserAutoLogout').checked;
+      savePlatformFlags(flags);
+      alert('Platform settings saved!');
     }
 
     // Init
